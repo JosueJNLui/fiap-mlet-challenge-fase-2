@@ -44,17 +44,20 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             COMMIT_RANGE="$BASE_SHA..$HEAD_SHA"
           elif printf '%s' "$BEFORE_SHA" | grep -Eq '^0+$'; then
-            COMMIT_RANGE="$HEAD_SHA"
+            git fetch origin "$DEFAULT_BRANCH" --depth=1
+            COMMIT_RANGE="origin/$DEFAULT_BRANCH..$HEAD_SHA"
           else
             COMMIT_RANGE="$BEFORE_SHA..$HEAD_SHA"
           fi
 
+          echo "Validating commits in range: $COMMIT_RANGE"
           uv run python scripts/validate_commits.py --range "$COMMIT_RANGE"
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BEFORE_SHA: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
       - name: Validate tag name
         if: github.ref_type == 'tag'
