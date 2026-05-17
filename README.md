@@ -56,6 +56,30 @@ make validate-commits COMMITS_RANGE=origin/main..HEAD
 make validate-tags TAGS="1.0.0 1.1.0"
 ```
 
+## Hooks locais
+
+Os hooks locais são opcionais. Eles só passam a executar automaticamente depois
+que o usuário habilitar explicitamente:
+
+```bash
+make install-hooks
+```
+
+Esse comando configura o repositório para usar os hooks versionados em
+`.githooks/`.
+
+Hooks disponíveis:
+
+- `pre-commit`: valida o nome da branch atual;
+- `commit-msg`: valida a mensagem do commit com Conventional Commits;
+- `pre-push`: valida branch, commits enviados e tags enviadas.
+
+Para desabilitar os hooks locais:
+
+```bash
+make uninstall-hooks
+```
+
 ## Padrões aceitos
 
 Exemplos de commits válidos:

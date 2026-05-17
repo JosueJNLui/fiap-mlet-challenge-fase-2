@@ -148,6 +148,29 @@ make validate-commits COMMITS_RANGE=origin/main..HEAD
 make validate-tags TAGS="1.0.0 1.1.0"
 ```
 
+## Hooks locais
+
+Os hooks de Git deste repositório ficam em `.githooks/`, mas são opcionais.
+Eles só devem ser considerados ativos quando o usuário executar:
+
+```bash
+make install-hooks
+```
+
+Esse comando configura `core.hooksPath` para `.githooks`.
+
+Para remover a configuração local:
+
+```bash
+make uninstall-hooks
+```
+
+Os hooks executam:
+
+- `pre-commit`: valida o nome da branch atual;
+- `commit-msg`: valida a mensagem do commit;
+- `pre-push`: valida branches, commits e tags enviados ao remoto.
+
 ## Regra para agentes
 
 Sempre que um agente de IA sugerir ou executar comandos Git neste repositório,

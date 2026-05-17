@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install validate validate-branch validate-commits validate-tags
+.PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags
 
 UV := uv --cache-dir /tmp/uv-cache
 BRANCH ?= $(shell git branch --show-current)
@@ -12,6 +12,15 @@ help: ## Show this help message.
 
 install: ## Install project dependencies, including dev tools.
 	$(UV) sync --all-groups
+
+install-hooks: ## Enable local Git hooks from .githooks.
+	chmod +x .githooks/*
+	git config core.hooksPath .githooks
+	@echo "Git hooks installed from .githooks"
+
+uninstall-hooks: ## Disable repository local Git hooks.
+	git config --unset core.hooksPath || true
+	@echo "Git hooks disabled"
 
 validate: validate-branch validate-commits validate-tags ## Run every validation.
 
