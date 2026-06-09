@@ -1,11 +1,17 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags
+.PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags \
+        dvc-setup data-download data-push data-pull
 
-UV := uv --cache-dir /tmp/uv-cache
+UV  := uv --cache-dir /tmp/uv-cache
+DVC := $(UV) run dvc
 BRANCH ?= $(shell git branch --show-current)
 COMMITS_RANGE ?= origin/main..HEAD
-TAGS ?=
+TAGS 	      ?=
+DAGSHUB_USER  ?=
+DAGSHUB_TOKEN ?=
+
+# ── Geral ─────────────────────────────────────────────────────────────────────
 
 help: ## Show this help message.
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -22,6 +28,8 @@ uninstall-hooks: ## Disable repository local Git hooks.
 	git config --unset core.hooksPath || true
 	@echo "Git hooks disabled"
 
+# ── Validação ─────────────────────────────────────────────────────────────────
+
 validate: validate-branch validate-commits validate-tags ## Run every validation.
 
 validate-branch: ## Validate the current branch or BRANCH=<name>.
@@ -32,3 +40,25 @@ validate-commits: ## Validate commits in COMMITS_RANGE, default origin/main..HEA
 
 validate-tags: ## Validate all repository tags or TAGS="1.2.3 2.0.0".
 	$(UV) run python scripts/validate_tags.py $(TAGS)
+
+# ── DVC / Dados ───────────────────────────────────────────────────────────────
+
+dvc-setup: ## Configure DVC remote (requires DAGSHUB_USER and DAGSHUB_TOKEN).
+	@test -n "${DAGSHUB_USER}" || (echo "ERROR: DAGSHUB_USER is required.  Use: make dvc-setup DAGSHUB_USER=<user> DAGSHUB_TOKEN=<token>" && exit 1)
+	@test -n "${DAGSHUB_TOKEN}" || (echo "ERROR: DAGSHUB_TOKEN is required.  Use: make dvc-setup DAGSHUB_USER=<user> DAGSHUB_TOKEN=<token>" && exit 1)
+	$(DVC) remote add -f origin https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.dvc
+	$(DVC) config core.autostage true
+	$(DVC) remote modify --local origin auth basic
+	$(DVC) remote modify --local origin user ${DAGSHUB_USER}
+	$(DVC) remote modify --local origin password ${DAGSHUB_TOKEN}
+	@echo "DVC remote configured successfully!"
+
+data-download: ## Download raw dataset from Kaggle and copy to data/raw/.
+	$(UV) run python scripts/dvc_setup.py
+
+data-push: ## Track data/raw with DVC and puth to DagsHub remote.
+	$(DVC) add data/raw
+	$(DVC) push -r origin
+
+data-pull: ## Pull data/raw from DagsHub remote (for reproduction).
+	$(DVC) pull -r origin
