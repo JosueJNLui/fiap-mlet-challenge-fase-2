@@ -9,6 +9,8 @@ dependencies = []
 [dependency-groups]
 dev = [
     "commitizen>=4.16.2",
+    "dvc>=3.0.0",
+    "kagglehub>=1.0.1",
 ]
 
 [tool.commitizen]
