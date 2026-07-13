@@ -25,9 +25,26 @@ dev = [
     "dvc>=3.0.0",
     "kagglehub>=1.0.1",
     "nbconvert>=7.17.1",
+    "pytest>=8.0.0",
+    "ruff>=0.14.0",
 ]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
 version = "0.1.0"
 version_provider = "pep621"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.uv]
+package = false

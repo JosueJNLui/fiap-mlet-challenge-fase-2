@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags \
-        dvc-setup data-download data-push data-pull
+        lint test dvc-setup data-download data-push data-pull
 
 UV  := uv --cache-dir /tmp/uv-cache
 DVC := $(UV) run dvc
@@ -30,7 +30,13 @@ uninstall-hooks: ## Disable repository local Git hooks.
 
 # ── Validação ─────────────────────────────────────────────────────────────────
 
-validate: validate-branch validate-commits validate-tags ## Run every validation.
+validate: lint test validate-branch validate-commits validate-tags ## Run every validation.
+
+lint: ## Lint src/ and tests/ with ruff.
+	$(UV) run ruff check src tests
+
+test: ## Run the test suite.
+	$(UV) run pytest -q
 
 validate-branch: ## Validate the current branch or BRANCH=<name>.
 	$(UV) run python scripts/validate_branch.py "$(BRANCH)"
