@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags \
-        lint test dvc-setup data-download data-push data-pull
+        lint test dvc-setup data-download data-push data-pull \
+        preprocess feature-eng train evaluate pipeline
 
 UV  := uv --cache-dir /tmp/uv-cache
 DVC := $(UV) run dvc
@@ -68,3 +69,21 @@ data-push: ## Track data/raw with DVC and puth to DagsHub remote.
 
 data-pull: ## Pull data/raw from DagsHub remote (for reproduction).
 	$(DVC) pull -r origin
+
+# ── Pipeline de ML ────────────────────────────────────────────────────────────
+
+PY := PYTHONPATH=src $(UV) run python -m
+
+preprocess: ## Filter/sample/reindex raw data into data/processed/.
+	$(PY) recsys.pipeline.preprocess
+
+feature-eng: ## Temporal train/test split into data/processed/.
+	$(PY) recsys.pipeline.feature_eng
+
+train: ## Train the 5 models, log MLflow runs, save to models/ (needs DagsHub creds).
+	$(PY) recsys.pipeline.train
+
+evaluate: ## Aggregate metrics into comparison.csv + metrics.json.
+	$(PY) recsys.pipeline.evaluate
+
+pipeline: preprocess feature-eng train evaluate ## Run the full pipeline end-to-end.
