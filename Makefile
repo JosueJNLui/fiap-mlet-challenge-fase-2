@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-hooks uninstall-hooks validate validate-branch validate-commits validate-tags \
+.PHONY: help install install-hooks uninstall-hooks validate validate-env validate-branch validate-commits validate-tags \
         lint test dvc-setup data-download data-push data-pull \
         preprocess feature-eng train evaluate pipeline
 
@@ -32,6 +32,9 @@ uninstall-hooks: ## Disable repository local Git hooks.
 # ── Validação ─────────────────────────────────────────────────────────────────
 
 validate: lint test validate-branch validate-commits validate-tags ## Run every validation.
+
+validate-env: ## Check Python, critical deps, .env and dataset access.
+	PYTHONPATH=src $(UV) run python scripts/validate_env.py
 
 lint: ## Lint src/ and tests/ with ruff.
 	$(UV) run ruff check src tests

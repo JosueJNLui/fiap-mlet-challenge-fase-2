@@ -26,6 +26,31 @@ make install
 O comando instala as dependências do projeto e as ferramentas de desenvolvimento,
 incluindo `commitizen`, usado para validar as mensagens de commit.
 
+### Por que uv (e não Poetry)
+
+O projeto usa [`uv`](https://docs.astral.sh/uv/) como gerenciador de dependências,
+equivalente moderno ao Poetry para fins de reprodutibilidade:
+
+- `pyproject.toml` no padrão PEP 621 (deps de prod + grupo `dev`);
+- `uv.lock` versionado, fixando todas as versões transitivas;
+- instalação determinística via `uv sync --all-groups` (exposta como `make install`,
+  o análogo de `poetry install`).
+
+### Configuração do ambiente
+
+Copie o `.env.example` e preencha as credenciais DagsHub (necessárias para treino e
+tracking no MLflow):
+
+```bash
+cp .env.example .env   # depois edite DAGSHUB_TOKEN / DAGSHUB_USER
+```
+
+Valide o ambiente (versão do Python, deps críticas, `.env` e acesso ao dataset):
+
+```bash
+make validate-env
+```
+
 ## Como executar as validações
 
 Para executar todos os gates:
