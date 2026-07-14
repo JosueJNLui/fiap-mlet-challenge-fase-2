@@ -1,7 +1,7 @@
 [project]
 name = "fiap-mlet-challenge-fase-2"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sistema de recomendação de filmes (MovieLens) com rede neural BPR em PyTorch, baselines scikit-learn, pipeline DVC, tracking MLflow e API FastAPI."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
@@ -53,8 +53,8 @@ testpaths = ["tests"]
 [tool.uv]
 package = false
 
-# CPU-only torch on Linux (Docker/CI has no GPU); the CUDA wheel + NVIDIA libs
-# balloon the image to ~18 GB. macOS keeps the default (mps/cpu) wheel from PyPI.
+# torch apenas CPU no Linux (Docker/CI não tem GPU); o wheel CUDA + libs NVIDIA
+# incham a imagem para ~18 GB. No macOS mantém o wheel padrão (mps/cpu) do PyPI.
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 

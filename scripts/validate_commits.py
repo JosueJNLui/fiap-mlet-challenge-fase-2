@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Git commit messages with Commitizen conventional commits."""
+"""Valida mensagens de commit do Git com Commitizen (conventional commits)."""
 
 from __future__ import annotations
 

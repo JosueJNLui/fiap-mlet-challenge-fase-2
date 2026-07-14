@@ -15,46 +15,46 @@ DAGSHUB_TOKEN ?=
 
 # ── Geral ─────────────────────────────────────────────────────────────────────
 
-help: ## Show this help message.
+help: ## Mostra esta mensagem de ajuda.
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make <target>\n\nTargets:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: ## Install project dependencies, including dev tools.
+install: ## Instala as dependências do projeto, incluindo ferramentas de dev.
 	$(UV) sync --all-groups
 
-install-hooks: ## Enable local Git hooks from .githooks.
+install-hooks: ## Habilita os hooks locais de Git em .githooks.
 	chmod +x .githooks/*
 	git config core.hooksPath .githooks
 	@echo "Git hooks installed from .githooks"
 
-uninstall-hooks: ## Disable repository local Git hooks.
+uninstall-hooks: ## Desabilita os hooks locais de Git do repositório.
 	git config --unset core.hooksPath || true
 	@echo "Git hooks disabled"
 
 # ── Validação ─────────────────────────────────────────────────────────────────
 
-validate: lint test validate-branch validate-commits validate-tags ## Run every validation.
+validate: lint test validate-branch validate-commits validate-tags ## Roda todas as validações.
 
-validate-env: ## Check Python, critical deps, .env and dataset access.
+validate-env: ## Verifica Python, deps críticas, .env e acesso ao dataset.
 	PYTHONPATH=src $(UV) run python scripts/validate_env.py
 
-lint: ## Lint src/ and tests/ with ruff.
+lint: ## Roda o lint de src/ e tests/ com ruff.
 	$(UV) run ruff check src tests
 
-test: ## Run the test suite.
+test: ## Roda a suíte de testes.
 	$(UV) run pytest -q
 
-validate-branch: ## Validate the current branch or BRANCH=<name>.
+validate-branch: ## Valida a branch atual ou BRANCH=<nome>.
 	$(UV) run python scripts/validate_branch.py "$(BRANCH)"
 
-validate-commits: ## Validate commits in COMMITS_RANGE, default origin/main..HEAD.
+validate-commits: ## Valida os commits em COMMITS_RANGE, padrão origin/main..HEAD.
 	$(UV) run python scripts/validate_commits.py --range "$(COMMITS_RANGE)"
 
-validate-tags: ## Validate all repository tags or TAGS="1.2.3 2.0.0".
+validate-tags: ## Valida todas as tags do repositório ou TAGS="1.2.3 2.0.0".
 	$(UV) run python scripts/validate_tags.py $(TAGS)
 
 # ── DVC / Dados ───────────────────────────────────────────────────────────────
 
-dvc-setup: ## Configure DVC remote (requires DAGSHUB_USER and DAGSHUB_TOKEN).
+dvc-setup: ## Configura o remote do DVC (requer DAGSHUB_USER e DAGSHUB_TOKEN).
 	@test -n "${DAGSHUB_USER}" || (echo "ERROR: DAGSHUB_USER is required.  Use: make dvc-setup DAGSHUB_USER=<user> DAGSHUB_TOKEN=<token>" && exit 1)
 	@test -n "${DAGSHUB_TOKEN}" || (echo "ERROR: DAGSHUB_TOKEN is required.  Use: make dvc-setup DAGSHUB_USER=<user> DAGSHUB_TOKEN=<token>" && exit 1)
 	$(DVC) remote add -f origin https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.dvc
@@ -64,47 +64,47 @@ dvc-setup: ## Configure DVC remote (requires DAGSHUB_USER and DAGSHUB_TOKEN).
 	$(DVC) remote modify --local origin password ${DAGSHUB_TOKEN}
 	@echo "DVC remote configured successfully!"
 
-data-download: ## Download raw dataset from Kaggle and copy to data/raw/.
+data-download: ## Baixa o dataset raw do Kaggle e copia para data/raw/.
 	$(UV) run python scripts/dvc_setup.py
 
-data-push: ## Track data/raw with DVC and puth to DagsHub remote.
+data-push: ## Versiona data/raw com DVC e envia para o remote DagsHub.
 	$(DVC) add data/raw
 	$(DVC) push -r origin
 
-data-pull: ## Pull data/raw from DagsHub remote (for reproduction).
+data-pull: ## Baixa data/raw do remote DagsHub (para reprodução).
 	$(DVC) pull -r origin
 
 # ── Pipeline de ML ────────────────────────────────────────────────────────────
 
 PY := PYTHONPATH=src $(UV) run python -m
 
-preprocess: ## Filter/sample/reindex raw data into data/processed/.
+preprocess: ## Filtra/amostra/reindexa os dados raw em data/processed/.
 	$(PY) recsys.pipeline.preprocess
 
-feature-eng: ## Temporal train/test split into data/processed/.
+feature-eng: ## Split temporal treino/teste em data/processed/.
 	$(PY) recsys.pipeline.feature_eng
 
-train: ## Train the 5 models, log MLflow runs, save to models/ (needs DagsHub creds).
+train: ## Treina os 5 modelos, loga runs no MLflow, salva em models/ (requer creds DagsHub).
 	$(PY) recsys.pipeline.train
 
-evaluate: ## Aggregate metrics into comparison.csv + metrics.json.
+evaluate: ## Agrega as métricas em comparison.csv + metrics.json.
 	$(PY) recsys.pipeline.evaluate
 
-pipeline: preprocess feature-eng train evaluate ## Run the full pipeline end-to-end.
+pipeline: preprocess feature-eng train evaluate ## Roda o pipeline completo de ponta a ponta.
 
-repro: ## Run the DVC pipeline (dvc repro).
+repro: ## Roda o pipeline do DVC (dvc repro).
 	$(DVC) repro
 
-api: ## Serve the model via FastAPI on http://localhost:8000 (needs models/).
+api: ## Sobe o modelo via FastAPI em http://localhost:8000 (requer models/).
 	PYTHONPATH=src $(UV) run uvicorn recsys.api.app:app --host 0.0.0.0 --port 8000
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 
-docker-build: ## Build the application image (recsys:local).
+docker-build: ## Constrói a imagem da aplicação (recsys:local).
 	docker build -t recsys:local .
 
-docker-train: ## Run the full pipeline in a container (needs .env + data/raw).
+docker-train: ## Roda o pipeline completo em um container (requer .env + data/raw).
 	docker compose run --rm train
 
-docker-mlflow: ## Start the local MLflow UI on http://localhost:5000.
+docker-mlflow: ## Sobe a UI local do MLflow em http://localhost:5000.
 	docker compose up mlflow

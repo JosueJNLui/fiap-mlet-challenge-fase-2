@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Git tags using semantic MAJOR.MINOR.PATCH format."""
+"""Valida tags do Git no formato semântico MAJOR.MINOR.PATCH."""
 
 from __future__ import annotations
 

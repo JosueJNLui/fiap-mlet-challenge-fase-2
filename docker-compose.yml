@@ -2,10 +2,10 @@ services:
   train:
     build: .
     image: recsys:local
-    env_file: .env                # supplies DAGSHUB_TOKEN for MLflow
+    env_file: .env                # fornece o DAGSHUB_TOKEN para o MLflow
     volumes:
-      - ./data:/app/data          # raw (host, via make data-pull) + processed output
-      - ./models:/app/models      # trained artifacts persist to host
+      - ./data:/app/data          # raw (host, via make data-pull) + saída processed
+      - ./models:/app/models      # artefatos treinados persistem no host
     command: >
       sh -c "python -m recsys.pipeline.preprocess &&
              python -m recsys.pipeline.feature_eng &&
@@ -13,7 +13,7 @@ services:
              python -m recsys.pipeline.evaluate"
 
   mlflow:
-    build: .                      # same image as train (mlflow is a prod dep)
+    build: .                      # mesma imagem do train (mlflow é dep de prod)
     image: recsys:local
     ports: ["5000:5000"]
     volumes:

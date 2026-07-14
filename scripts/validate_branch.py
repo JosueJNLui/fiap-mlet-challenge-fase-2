@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate branch names against Conventional Branch 1.0.0."""
+"""Valida nomes de branch conforme a Conventional Branch 1.0.0."""
 
 from __future__ import annotations
 

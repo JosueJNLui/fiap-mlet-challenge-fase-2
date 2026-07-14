@@ -1,7 +1,7 @@
 """Stage 2: split temporal treino/teste (sem vazar o futuro).
 
-ponytail: nó separado apenas para satisfazer os 4 stages exigidos pelo pipeline DVC
-(Task 3). Sua única "feature" é o split temporal — dobraria em preprocess.py se o DVC
+Nó separado apenas para satisfazer os 4 stages exigidos pelo pipeline DVC
+(Task 3). Sua única "feature" é o split temporal, que dobraria em preprocess.py se o DVC
 não pedisse a separação.
 """
 

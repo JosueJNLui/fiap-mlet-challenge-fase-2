@@ -1,11 +1,11 @@
-# ---- builder: resolve deps into /app/.venv ----
+# ---- builder: resolve as deps em /app/.venv ----
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-# --no-dev: prod deps only (no dvc/pytest/ruff). Containers run the pipeline
-# modules directly; dvc repro stays a host concern (make repro). torch resolves
-# to the CPU wheel on Linux via [tool.uv.sources] in pyproject (no CUDA/NVIDIA).
+# --no-dev: apenas deps de prod (sem dvc/pytest/ruff). Os containers rodam os módulos
+# do pipeline diretamente; dvc repro continua sendo responsabilidade do host (make repro).
+# No Linux, torch resolve para o wheel CPU via [tool.uv.sources] no pyproject (sem CUDA/NVIDIA).
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 
 # ---- runtime: slim, non-root, PYTHONPATH=src ----
@@ -15,8 +15,8 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONPATH=/app/src PYTHONUNBUFFERED=1
 COPY --from=builder /app/.venv /app/.venv
 COPY src ./src
 COPY configs ./configs
-# data/ and models/ arrive as volumes; mlruns owned by app so the named MLflow
-# volume inherits uid-1000 ownership (non-root writes the sqlite db).
+# data/ e models/ chegam como volumes; mlruns pertence ao usuário app para que o volume
+# nomeado do MLflow herde a propriedade do uid-1000 (o processo non-root escreve o db sqlite).
 RUN useradd --create-home --uid 1000 app \
  && mkdir -p /app/data /app/models /app/mlruns \
  && chown -R app /app

@@ -63,7 +63,7 @@ class _RegistryRecommender(Recommender):
 
 def _force_cpu(model: Recommender) -> None:
     """Reseta o device de modelos torch (o ``device`` mps/cuda é picklado no treino)."""
-    # ponytail: só o BPR carrega um nn.Module; guardado por hasattr.
+    # só o BPR carrega um nn.Module; guardado por hasattr.
     if hasattr(model, "model") and hasattr(model, "device"):
         model.device = "cpu"
         model.model.to("cpu")

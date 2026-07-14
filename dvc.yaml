@@ -2,7 +2,7 @@
 # Encadeia os entrypoints de recsys.pipeline.* (Task 1). Params vêm de
 # configs/config.yaml (fonte única, também lida pelo Pydantic Settings).
 #
-# ponytail: cada stage depende só dos módulos que importa, não do src/recsys inteiro —
+# cada stage depende só dos módulos que importa, não do src/recsys inteiro, então
 # editar a API ou um notebook não deve re-disparar o treino caro do BPR.
 # `uv run` resolve o venv do projeto para que `dvc repro` funcione mesmo fora dele;
 # PYTHONPATH=src porque o pacote não é instalado ([tool.uv] package = false).

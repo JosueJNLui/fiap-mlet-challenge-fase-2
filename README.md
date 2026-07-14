@@ -1,5 +1,33 @@
 # fiap-mlet-challenge-fase-2
 
+Sistema de recomendação de filmes baseado no comportamento de avaliação dos usuários
+(MovieLens 20M). O modelo central é uma rede neural de fatoração de matrizes treinada com
+BPR (Bayesian Personalized Ranking) em PyTorch, comparada a baselines scikit-learn. O
+fluxo é versionado com DVC, rastreado no MLflow (DagsHub), servido por uma API FastAPI e
+containerizado com Docker.
+
+```mermaid
+flowchart LR
+    A[data/raw<br/>MovieLens 20M] --> B[Pipeline DVC<br/>preprocess -> feature_eng<br/>-> train -> evaluate]
+    B --> C[models/<br/>artefatos treinados]
+    B --> D[(MLflow Registry<br/>alias production)]
+    C --> E[API FastAPI<br/>/health /recommend /docs]
+    D --> E
+```
+
+Para os detalhes de arquitetura, pipeline e do modelo, veja a
+[Documentação](#documentação).
+
+## Documentação
+
+- [Arquitetura](docs/ARCHITECTURE.md): estrutura do pacote, fluxo do pipeline DVC, design
+  patterns, MLflow/Registry e camada de serving.
+- [Model Card](docs/MODEL_CARD.md): modelo BPR-MF, dados, hiperparâmetros, métricas,
+  comparação com baselines, limitações e vieses.
+- [Diretrizes de código](docs/CODE_GUIDELINES.md): clean code, SOLID, design patterns,
+  ruff e estrutura de diretórios.
+- [Guia de contribuição](docs/CONTRIBUTING.md): setup, convenções de Git e validação.
+
 ## Gates de commit
 
 Este projeto possui validações automatizadas para manter a rastreabilidade do
