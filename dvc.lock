@@ -1,0 +1,213 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.preprocess
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 299114f0f7fd95a7d09dc9f3b45bd8c7.dir
+      size: 928454686
+      nfiles: 6
+    - path: src/recsys/config.py
+      hash: md5
+      md5: 1e7f9e126c3a792b6856aae0eb1d4047
+      size: 2976
+    - path: src/recsys/io.py
+      hash: md5
+      md5: d2aabd61832674e108626f818756e2c7
+      size: 1189
+    - path: src/recsys/pipeline/preprocess.py
+      hash: md5
+      md5: 7ca1219c6291085ef89c1ebf0c27b8bc
+      size: 1044
+    - path: src/recsys/preprocessing/data.py
+      hash: md5
+      md5: 19c690d6809d653206dea658eb65e685
+      size: 1914
+    params:
+      configs/config.yaml:
+        data:
+          min_user_ratings: 20
+          min_item_ratings: 20
+          n_users_sample: 20000
+          test_frac: 0.2
+        seed: 42
+    outs:
+    - path: data/processed/interactions.parquet
+      hash: md5
+      md5: f736f02310ab1a115470d4d431b54041
+      size: 30308674
+    - path: data/processed/meta.json
+      hash: md5
+      md5: 67aeb197f7cbe497cb8c65e459ef595f
+      size: 63
+  feature_eng:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.feature_eng
+    deps:
+    - path: data/processed/interactions.parquet
+      hash: md5
+      md5: f736f02310ab1a115470d4d431b54041
+      size: 30308674
+    - path: src/recsys/pipeline/feature_eng.py
+      hash: md5
+      md5: dcb804f336e72179695d8a5db457561b
+      size: 977
+    - path: src/recsys/preprocessing/split.py
+      hash: md5
+      md5: fc14c39e2b9b92e8c449c4e6a2dddcf2
+      size: 2070
+    params:
+      configs/config.yaml:
+        data.test_frac: 0.2
+    outs:
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 306fb13c7986300baa07d65c24c1f5b3
+      size: 7003172
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 1d294a76c056988408f30209cb74cd0c
+      size: 24310160
+  train:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.train
+    deps:
+    - path: data/processed/meta.json
+      hash: md5
+      md5: 67aeb197f7cbe497cb8c65e459ef595f
+      size: 63
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 306fb13c7986300baa07d65c24c1f5b3
+      size: 7003172
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 1d294a76c056988408f30209cb74cd0c
+      size: 24310160
+    - path: src/recsys/evaluation
+      hash: md5
+      md5: d7f8a9df35daf7fd0a9ff2b98d3aa56a.dir
+      size: 15178
+      nfiles: 4
+    - path: src/recsys/models
+      hash: md5
+      md5: dca880967f6bd7d90aa17e5f372c9d5e.dir
+      size: 45377
+      nfiles: 12
+    - path: src/recsys/pipeline/train.py
+      hash: md5
+      md5: f470bcf874ef75f438e897ed25795717
+      size: 3640
+    - path: src/recsys/tracking.py
+      hash: md5
+      md5: 4172c84f7e50786017f1998b0660ed2a
+      size: 2293
+    params:
+      configs/config.yaml:
+        eval:
+          like_threshold: 4.0
+          ranking_n_users: 500
+          ranking_item_batch: 2048
+        mlflow:
+          experiment_name: MovieLens-Reco-Etapa2-Modelagem
+        models:
+          bias:
+            reg: 10.0
+          svd:
+            n_components: 50
+            seed: 42
+          bpr:
+            emb_dim: 128
+            lr: 0.005
+            weight_decay: 1e-05
+            n_neg: 10
+            batch_size: 2048
+            epochs: 40
+            patience: 6
+            val_users: 300
+            like_threshold: 4.0
+        seed: 42
+    outs:
+    - path: models/bias.metrics.json
+      hash: md5
+      md5: 75f9ef711506709d4dd2f3905ad373e0
+      size: 336
+    - path: models/bias.pkl
+      hash: md5
+      md5: e13a8681f451c6c2caaa364ecd812dde
+      size: 265035
+    - path: models/bpr.metrics.json
+      hash: md5
+      md5: 5324ad24cc6883172e0b46cdd297b75e
+      size: 333
+    - path: models/bpr.pkl
+      hash: md5
+      md5: 2383ba1407c28ffb21dc998468cdc745
+      size: 16943385
+    - path: models/global_mean.metrics.json
+      hash: md5
+      md5: 3613205937f84fe96f620adcb261f763
+      size: 340
+    - path: models/global_mean.pkl
+      hash: md5
+      md5: 90b5fbf96c80a569f919570dbc915fe4
+      size: 85
+    - path: models/popularity.metrics.json
+      hash: md5
+      md5: 2966af36febedb3ae1cbd9b9c2723ae4
+      size: 336
+    - path: models/popularity.pkl
+      hash: md5
+      md5: a215e0ab8427b2910050a9330eed4109
+      size: 104951
+    - path: models/svd.metrics.json
+      hash: md5
+      md5: 75ceac0ed65a6996d358dc41393dc615
+      size: 332
+    - path: models/svd.pkl
+      hash: md5
+      md5: 8bf6836ba7a5823ecb11d56fea0d8184
+      size: 6617951
+  evaluate:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.evaluate
+    deps:
+    - path: models/bias.metrics.json
+      hash: md5
+      md5: 75f9ef711506709d4dd2f3905ad373e0
+      size: 336
+    - path: models/bpr.metrics.json
+      hash: md5
+      md5: 5324ad24cc6883172e0b46cdd297b75e
+      size: 333
+    - path: models/global_mean.metrics.json
+      hash: md5
+      md5: 3613205937f84fe96f620adcb261f763
+      size: 340
+    - path: models/popularity.metrics.json
+      hash: md5
+      md5: 2966af36febedb3ae1cbd9b9c2723ae4
+      size: 336
+    - path: models/svd.metrics.json
+      hash: md5
+      md5: 75ceac0ed65a6996d358dc41393dc615
+      size: 332
+    - path: src/recsys/pipeline/evaluate.py
+      hash: md5
+      md5: 888d7eb4a5aa3c832030564050c2dff6
+      size: 1797
+    - path: src/recsys/tracking.py
+      hash: md5
+      md5: 4172c84f7e50786017f1998b0660ed2a
+      size: 2293
+    params:
+      configs/config.yaml:
+        mlflow:
+          experiment_name: MovieLens-Reco-Etapa2-Modelagem
+    outs:
+    - path: comparison.csv
+      hash: md5
+      md5: a80aa1200a0b76860ee057d1d089aa1b
+      size: 1091
+    - path: metrics.json
+      hash: md5
+      md5: c7927e8dcbb91e9537cac526d0087a4b
+      size: 2054

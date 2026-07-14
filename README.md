@@ -1,5 +1,33 @@
 # fiap-mlet-challenge-fase-2
 
+Sistema de recomendação de filmes baseado no comportamento de avaliação dos usuários
+(MovieLens 20M). O modelo central é uma rede neural de fatoração de matrizes treinada com
+BPR (Bayesian Personalized Ranking) em PyTorch, comparada a baselines scikit-learn. O
+fluxo é versionado com DVC, rastreado no MLflow (DagsHub), servido por uma API FastAPI e
+containerizado com Docker.
+
+```mermaid
+flowchart LR
+    A[data/raw<br/>MovieLens 20M] --> B[Pipeline DVC<br/>preprocess -> feature_eng<br/>-> train -> evaluate]
+    B --> C[models/<br/>artefatos treinados]
+    B --> D[(MLflow Registry<br/>alias production)]
+    C --> E[API FastAPI<br/>/health /recommend /docs]
+    D --> E
+```
+
+Para os detalhes de arquitetura, pipeline e do modelo, veja a
+[Documentação](#documentação).
+
+## Documentação
+
+- [Arquitetura](docs/ARCHITECTURE.md): estrutura do pacote, fluxo do pipeline DVC, design
+  patterns, MLflow/Registry e camada de serving.
+- [Model Card](docs/MODEL_CARD.md): modelo BPR-MF, dados, hiperparâmetros, métricas,
+  comparação com baselines, limitações e vieses.
+- [Diretrizes de código](docs/CODE_GUIDELINES.md): clean code, SOLID, design patterns,
+  ruff e estrutura de diretórios.
+- [Guia de contribuição](docs/CONTRIBUTING.md): setup, convenções de Git e validação.
+
 ## Gates de commit
 
 Este projeto possui validações automatizadas para manter a rastreabilidade do
@@ -25,6 +53,59 @@ make install
 
 O comando instala as dependências do projeto e as ferramentas de desenvolvimento,
 incluindo `commitizen`, usado para validar as mensagens de commit.
+
+### Por que uv (e não Poetry)
+
+O projeto usa [`uv`](https://docs.astral.sh/uv/) como gerenciador de dependências,
+equivalente moderno ao Poetry para fins de reprodutibilidade:
+
+- `pyproject.toml` no padrão PEP 621 (deps de prod + grupo `dev`);
+- `uv.lock` versionado, fixando todas as versões transitivas;
+- instalação determinística via `uv sync --all-groups` (exposta como `make install`,
+  o análogo de `poetry install`).
+
+### Configuração do ambiente
+
+Copie o `.env.example` e preencha as credenciais DagsHub (necessárias para treino e
+tracking no MLflow):
+
+```bash
+cp .env.example .env   # depois edite DAGSHUB_TOKEN / DAGSHUB_USER
+```
+
+Valide o ambiente (versão do Python, deps críticas, `.env` e acesso ao dataset):
+
+```bash
+make validate-env
+```
+
+## Docker
+
+Imagem multi-stage (builder `uv` + runtime slim, usuário não-root):
+
+```bash
+make docker-build                    # constrói a imagem recsys:local
+docker compose up mlflow             # UI do MLflow em http://localhost:5000
+make docker-train                    # roda o pipeline (preprocess→…→evaluate) no container
+```
+
+`docker compose run --rm train` requer o `.env` (DagsHub) e o `data/raw` presente no host
+(monta `./data` e `./models` como volumes). O serviço `mlflow` sobe um servidor local com
+backend sqlite; o treino loga no MLflow do DagsHub, salvo se `MLFLOW_TRACKING_URI` for
+sobrescrito.
+
+## API (FastAPI)
+
+Expõe o modelo final. Requer o pipeline treinado (`models/bpr.pkl` + `models/serving.pkl`).
+Carrega o modelo do Model Registry (alias `production`) quando há credenciais DagsHub, com
+fallback para o pickle local.
+
+```bash
+make api                             # uvicorn em http://localhost:8000 (ou: docker compose up api)
+curl -i localhost:8000/health        # {"status":"ok",...} + headers X-Request-ID / X-Process-Time
+curl "localhost:8000/recommend?user_id=1"   # top-10 por score (404 se o user não existe)
+# Swagger: http://localhost:8000/docs
+```
 
 ## Como executar as validações
 

@@ -1,0 +1,87 @@
+# Pipeline reprodutível: preprocess -> feature_eng -> train -> evaluate.
+# Encadeia os entrypoints de recsys.pipeline.* (Task 1). Params vêm de
+# configs/config.yaml (fonte única, também lida pelo Pydantic Settings).
+#
+# cada stage depende só dos módulos que importa, não do src/recsys inteiro, então
+# editar a API ou um notebook não deve re-disparar o treino caro do BPR.
+# `uv run` resolve o venv do projeto para que `dvc repro` funcione mesmo fora dele;
+# PYTHONPATH=src porque o pacote não é instalado ([tool.uv] package = false).
+stages:
+  preprocess:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.preprocess
+    deps:
+      - data/raw
+      - src/recsys/pipeline/preprocess.py
+      - src/recsys/preprocessing/data.py
+      - src/recsys/config.py
+      - src/recsys/io.py
+    params:
+      - configs/config.yaml:
+          - seed
+          - data
+    outs:
+      - data/processed/interactions.parquet
+      - data/processed/meta.json
+
+  feature_eng:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.feature_eng
+    deps:
+      - data/processed/interactions.parquet
+      - src/recsys/pipeline/feature_eng.py
+      - src/recsys/preprocessing/split.py
+    params:
+      - configs/config.yaml:
+          - data.test_frac
+    outs:
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+
+  train:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.train
+    deps:
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+      - data/processed/meta.json
+      - data/processed/interactions.parquet  # build_serving_artifact (maps + seen)
+      - src/recsys/pipeline/train.py
+      - src/recsys/api/serving.py
+      - src/recsys/models
+      - src/recsys/evaluation
+      - src/recsys/tracking.py
+    params:
+      - configs/config.yaml:
+          - seed
+          - models
+          - eval
+          - mlflow
+    outs:
+      - models/global_mean.pkl
+      - models/bias.pkl
+      - models/svd.pkl
+      - models/popularity.pkl
+      - models/bpr.pkl
+      - models/global_mean.metrics.json
+      - models/bias.metrics.json
+      - models/svd.metrics.json
+      - models/popularity.metrics.json
+      - models/bpr.metrics.json
+      - models/serving.pkl
+
+  evaluate:
+    cmd: PYTHONPATH=src uv run python -m recsys.pipeline.evaluate
+    deps:
+      - models/global_mean.metrics.json
+      - models/bias.metrics.json
+      - models/svd.metrics.json
+      - models/popularity.metrics.json
+      - models/bpr.metrics.json
+      - src/recsys/pipeline/evaluate.py
+      - src/recsys/tracking.py
+    params:
+      - configs/config.yaml:
+          - mlflow
+    outs:
+      - comparison.csv
+    metrics:
+      - metrics.json:
+          cache: false
