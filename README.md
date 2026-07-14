@@ -51,6 +51,21 @@ Valide o ambiente (versão do Python, deps críticas, `.env` e acesso ao dataset
 make validate-env
 ```
 
+## Docker
+
+Imagem multi-stage (builder `uv` + runtime slim, usuário não-root):
+
+```bash
+make docker-build                    # constrói a imagem recsys:local
+docker compose up mlflow             # UI do MLflow em http://localhost:5000
+make docker-train                    # roda o pipeline (preprocess→…→evaluate) no container
+```
+
+`docker compose run --rm train` requer o `.env` (DagsHub) e o `data/raw` presente no host
+(monta `./data` e `./models` como volumes). O serviço `mlflow` sobe um servidor local com
+backend sqlite; o treino loga no MLflow do DagsHub, salvo se `MLFLOW_TRACKING_URI` for
+sobrescrito. O serviço `api` está comentado no `docker-compose.yml` até a Task 6 (FastAPI).
+
 ## Como executar as validações
 
 Para executar todos os gates:

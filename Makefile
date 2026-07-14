@@ -2,7 +2,8 @@
 
 .PHONY: help install install-hooks uninstall-hooks validate validate-env validate-branch validate-commits validate-tags \
         lint test dvc-setup data-download data-push data-pull \
-        preprocess feature-eng train evaluate pipeline repro
+        preprocess feature-eng train evaluate pipeline repro \
+        docker-build docker-train docker-mlflow
 
 UV  := uv --cache-dir /tmp/uv-cache
 DVC := $(UV) run dvc
@@ -93,3 +94,14 @@ pipeline: preprocess feature-eng train evaluate ## Run the full pipeline end-to-
 
 repro: ## Run the DVC pipeline (dvc repro).
 	$(DVC) repro
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+
+docker-build: ## Build the application image (recsys:local).
+	docker build -t recsys:local .
+
+docker-train: ## Run the full pipeline in a container (needs .env + data/raw).
+	docker compose run --rm train
+
+docker-mlflow: ## Start the local MLflow UI on http://localhost:5000.
+	docker compose up mlflow

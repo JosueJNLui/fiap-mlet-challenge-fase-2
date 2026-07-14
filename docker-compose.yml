@@ -1,0 +1,35 @@
+services:
+  train:
+    build: .
+    image: recsys:local
+    env_file: .env                # supplies DAGSHUB_TOKEN for MLflow
+    volumes:
+      - ./data:/app/data          # raw (host, via make data-pull) + processed output
+      - ./models:/app/models      # trained artifacts persist to host
+    command: >
+      sh -c "python -m recsys.pipeline.preprocess &&
+             python -m recsys.pipeline.feature_eng &&
+             python -m recsys.pipeline.train &&
+             python -m recsys.pipeline.evaluate"
+
+  mlflow:
+    build: .                      # same image as train (mlflow is a prod dep)
+    image: recsys:local
+    ports: ["5000:5000"]
+    volumes:
+      - mlflow-data:/app/mlruns
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////app/mlruns/mlflow.db
+      --default-artifact-root /app/mlruns/artifacts
+
+  # api:                          # Task 6 — uncomment when src/recsys/api exists
+  #   image: recsys:local
+  #   ports: ["8000:8000"]
+  #   env_file: .env
+  #   volumes:
+  #     - ./models:/app/models
+  #   command: uvicorn recsys.api.app:app --host 0.0.0.0 --port 8000
+
+volumes:
+  mlflow-data:
