@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "dagshub>=0.7.0",
+    "fastapi>=0.137.1",
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.0",
     "mlflow>=3.14.0",
@@ -18,12 +19,14 @@ dependencies = [
     "scipy>=1.17.1",
     "seaborn>=0.13.2",
     "torch>=2.12.0",
+    "uvicorn[standard]>=0.49.0",
 ]
 
 [dependency-groups]
 dev = [
     "commitizen>=4.16.2",
     "dvc>=3.0.0",
+    "httpx>=0.28.1",
     "kagglehub>=1.0.1",
     "nbconvert>=7.17.1",
     "pytest>=8.0.0",

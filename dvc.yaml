@@ -42,7 +42,9 @@ stages:
       - data/processed/train.parquet
       - data/processed/test.parquet
       - data/processed/meta.json
+      - data/processed/interactions.parquet  # build_serving_artifact (maps + seen)
       - src/recsys/pipeline/train.py
+      - src/recsys/api/serving.py
       - src/recsys/models
       - src/recsys/evaluation
       - src/recsys/tracking.py
@@ -63,6 +65,7 @@ stages:
       - models/svd.metrics.json
       - models/popularity.metrics.json
       - models/bpr.metrics.json
+      - models/serving.pkl
 
   evaluate:
     cmd: PYTHONPATH=src uv run python -m recsys.pipeline.evaluate

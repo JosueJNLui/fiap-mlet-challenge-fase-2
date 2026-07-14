@@ -2,7 +2,7 @@
 
 .PHONY: help install install-hooks uninstall-hooks validate validate-env validate-branch validate-commits validate-tags \
         lint test dvc-setup data-download data-push data-pull \
-        preprocess feature-eng train evaluate pipeline repro \
+        preprocess feature-eng train evaluate pipeline repro api \
         docker-build docker-train docker-mlflow
 
 UV  := uv --cache-dir /tmp/uv-cache
@@ -94,6 +94,9 @@ pipeline: preprocess feature-eng train evaluate ## Run the full pipeline end-to-
 
 repro: ## Run the DVC pipeline (dvc repro).
 	$(DVC) repro
+
+api: ## Serve the model via FastAPI on http://localhost:8000 (needs models/).
+	PYTHONPATH=src $(UV) run uvicorn recsys.api.app:app --host 0.0.0.0 --port 8000
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 

@@ -64,7 +64,20 @@ make docker-train                    # roda o pipeline (preprocess→…→evalu
 `docker compose run --rm train` requer o `.env` (DagsHub) e o `data/raw` presente no host
 (monta `./data` e `./models` como volumes). O serviço `mlflow` sobe um servidor local com
 backend sqlite; o treino loga no MLflow do DagsHub, salvo se `MLFLOW_TRACKING_URI` for
-sobrescrito. O serviço `api` está comentado no `docker-compose.yml` até a Task 6 (FastAPI).
+sobrescrito.
+
+## API (FastAPI)
+
+Expõe o modelo final. Requer o pipeline treinado (`models/bpr.pkl` + `models/serving.pkl`).
+Carrega o modelo do Model Registry (alias `production`) quando há credenciais DagsHub, com
+fallback para o pickle local.
+
+```bash
+make api                             # uvicorn em http://localhost:8000 (ou: docker compose up api)
+curl -i localhost:8000/health        # {"status":"ok",...} + headers X-Request-ID / X-Process-Time
+curl "localhost:8000/recommend?user_id=1"   # top-10 por score (404 se o user não existe)
+# Swagger: http://localhost:8000/docs
+```
 
 ## Como executar as validações
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import mlflow
 import pandas as pd
 
+from recsys.api.serving import build_serving_artifact
 from recsys.config import Settings, load_settings
 from recsys.evaluation.metrics import seen_items_by_user
 from recsys.io import META, TEST, TRAIN, read_json, save_model, write_json
@@ -87,6 +88,7 @@ def main() -> None:
     meta = read_json(s.paths.processed / META)
     for spec in _specs(s):
         _train_one(spec, train, test, meta, s)
+    build_serving_artifact(s)  # artefato self-contained p/ a API (Task 6)
 
 
 if __name__ == "__main__":
