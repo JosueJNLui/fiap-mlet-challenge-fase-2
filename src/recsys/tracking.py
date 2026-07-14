@@ -11,6 +11,7 @@ import os
 
 import mlflow
 import pandas as pd
+from mlflow import MlflowClient
 from mlflow.models import infer_signature
 
 from recsys.config import Settings
@@ -56,3 +57,30 @@ def log_recommender(model: Recommender, example: pd.DataFrame, registered_model_
         input_example=example,
         registered_model_name=registered_model_name,
     )
+
+
+def _alias_ndcg(client: MlflowClient, name: str, alias: str) -> float | None:
+    """NDCG@10 da versão apontada por ``alias``, ou ``None`` se o alias não existe."""
+    try:
+        mv = client.get_model_version_by_alias(name, alias)
+    except Exception:  # noqa: BLE001 - alias/modelo inexistente
+        return None
+    return client.get_run(mv.run_id).data.metrics.get("ndcg_at_10")
+
+
+def promote_to_production(label: str, ndcg: float) -> None:
+    """Promove a última versão de ``MovieLens_<label>_Reco`` no Model Registry.
+
+    Toda versão vira ``staging``; o alias ``production`` só migra para ela se o
+    NDCG@10 informado bater o da produção atual (ou se ainda não houver produção).
+    """
+    client = MlflowClient()
+    name = f"MovieLens_{label}_Reco"
+    versions = client.search_model_versions(f"name='{name}'")
+    if not versions:
+        return
+    latest = max(versions, key=lambda v: int(v.version))
+    client.set_registered_model_alias(name, "staging", latest.version)
+    current = _alias_ndcg(client, name, "production")
+    if current is None or ndcg > current:
+        client.set_registered_model_alias(name, "production", latest.version)

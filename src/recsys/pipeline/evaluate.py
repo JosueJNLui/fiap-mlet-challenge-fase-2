@@ -14,7 +14,7 @@ import pandas as pd
 
 from recsys.config import load_settings
 from recsys.io import read_json, write_json
-from recsys.tracking import init_mlflow
+from recsys.tracking import init_mlflow, promote_to_production
 
 NAME_TO_LABEL = {
     "global_mean": "GlobalMean",
@@ -50,7 +50,9 @@ def main() -> None:
     with mlflow.start_run(run_name="model_comparison_summary"):
         mlflow.log_artifact(str(COMPARISON_CSV))
         mlflow.set_tags(best)
-    print(f"evaluate: melhor RMSE={best['best_rmse_model']} melhor NDCG={best['best_ndcg_model']}")
+    best_label = best["best_ndcg_model"]
+    promote_to_production(best_label, rows[best_label]["ndcg_at_10"])
+    print(f"evaluate: melhor RMSE={best['best_rmse_model']} melhor NDCG={best_label}")
 
 
 if __name__ == "__main__":
