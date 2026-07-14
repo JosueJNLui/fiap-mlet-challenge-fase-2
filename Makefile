@@ -2,7 +2,7 @@
 
 .PHONY: help install install-hooks uninstall-hooks validate validate-env validate-branch validate-commits validate-tags \
         lint test dvc-setup data-download data-push data-pull \
-        preprocess feature-eng train evaluate pipeline
+        preprocess feature-eng train evaluate pipeline repro
 
 UV  := uv --cache-dir /tmp/uv-cache
 DVC := $(UV) run dvc
@@ -90,3 +90,6 @@ evaluate: ## Aggregate metrics into comparison.csv + metrics.json.
 	$(PY) recsys.pipeline.evaluate
 
 pipeline: preprocess feature-eng train evaluate ## Run the full pipeline end-to-end.
+
+repro: ## Run the DVC pipeline (dvc repro).
+	$(DVC) repro

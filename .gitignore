@@ -225,4 +225,4 @@ CLAUDE.md
 /models/*.pkl
 /models/*.metrics.json
 /comparison.csv
-/metrics.json
+# metrics.json é um metric DVC (cache: false) — versionado no git para dvc metrics show/diff.
