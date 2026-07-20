@@ -3,7 +3,7 @@
 .PHONY: help install install-hooks uninstall-hooks validate validate-env validate-branch validate-commits validate-tags \
         lint test dvc-setup data-download data-push data-pull \
         preprocess feature-eng train evaluate pipeline repro api \
-        docker-build docker-train docker-mlflow
+        docker-build docker-train docker-mlflow docker-api-build docker-api-run
 
 UV  := uv --cache-dir /tmp/uv-cache
 DVC := $(UV) run dvc
@@ -102,6 +102,12 @@ api: ## Sobe o modelo via FastAPI em http://localhost:8000 (requer models/).
 
 docker-build: ## Constrói a imagem da aplicação (recsys:local).
 	docker build -t recsys:local .
+
+docker-api-build: ## Constrói a imagem dedicada à API (recsys-api:local).
+	docker build -f Dockerfile.api -t recsys-api:local .
+
+docker-api-run: ## Sobe a API localmente em http://localhost:8000 (requer models/).
+	docker run --rm -p 8000:8000 --mount type=bind,source="$(shell pwd)/models",target=/app/models --name recsys-api recsys-api:local
 
 docker-train: ## Roda o pipeline completo em um container (requer .env + data/raw).
 	docker compose run --rm train

@@ -1,0 +1,20 @@
+FROM astral/uv:python3.13-bookworm-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    PATH=/app/.venv/bin:$PATH
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv venv /app/.venv \
+    && uv sync --frozen --no-dev
+
+COPY src ./src
+COPY configs ./configs
+
+EXPOSE 8000
+
+CMD ["python", "-m", "uvicorn", "recsys.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
