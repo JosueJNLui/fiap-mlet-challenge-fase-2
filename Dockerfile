@@ -15,10 +15,10 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONPATH=/app/src PYTHONUNBUFFERED=1
 COPY --from=builder /app/.venv /app/.venv
 COPY src ./src
 COPY configs ./configs
-# data/ e models/ chegam como volumes; mlruns pertence ao usuário app para que o volume
-# nomeado do MLflow herde a propriedade do uid-1000 (o processo non-root escreve o db sqlite).
+# data/, models/ e mlruns precisam ser graváveis pelo usuário app; evitar um chown -R
+# sobre toda a árvore do projeto, pois isso pode ficar extremamente lento quando a
+# imagem contém um .venv grande.
 RUN useradd --create-home --uid 1000 app \
- && mkdir -p /app/data /app/models /app/mlruns \
- && chown -R app /app
+ && install -d -o app -g app /app/data /app/models /app/mlruns
 USER app
 CMD ["python", "-m", "recsys.pipeline.train"]
