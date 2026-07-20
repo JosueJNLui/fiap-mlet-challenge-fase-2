@@ -12,7 +12,27 @@ import sys
 def commit_hashes(revision_range: str | None) -> list[str]:
     command = ["git", "rev-list", "--reverse"]
     command.append(revision_range or "HEAD")
-    result = subprocess.run(command, check=True, capture_output=True, text=True)
+
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as exc:
+        if not revision_range:
+            raise
+
+        fallback_revision = revision_range.split("..")[-1]
+        fallback_command = ["git", "rev-list", "--reverse", fallback_revision]
+        try:
+            fallback_result = subprocess.run(
+                fallback_command,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError:
+            raise exc
+
+        return [commit for commit in fallback_result.stdout.splitlines() if commit]
+
     return [commit for commit in result.stdout.splitlines() if commit]
 
 
