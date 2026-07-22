@@ -7,11 +7,13 @@ from recsys.models.baselines import (
     PopularityRecommender,
 )
 from recsys.models.bpr import BPRRecommender
+from recsys.models.bprv2 import BPRv2Recommender
 from recsys.models.factory import create_recommender
 from recsys.models.svd import SVDRecommender
 
 __all__ = [
     "BPRRecommender",
+    "BPRv2Recommender",
     "BiasRecommender",
     "GlobalMeanRecommender",
     "PopularityRecommender",

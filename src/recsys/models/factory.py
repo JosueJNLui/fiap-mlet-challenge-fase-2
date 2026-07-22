@@ -9,6 +9,7 @@ from recsys.models.baselines import (
     PopularityRecommender,
 )
 from recsys.models.bpr import BPRRecommender
+from recsys.models.bprv2 import BPRv2Recommender
 from recsys.models.svd import SVDRecommender
 
 
@@ -35,6 +36,7 @@ def create_recommender(
         "svd": lambda: SVDRecommender(n_users, n_items, **params),
         "popularity": lambda: PopularityRecommender(n_items),
         "bpr": lambda: BPRRecommender(n_users, n_items, **params),
+        "bprv2": lambda: BPRv2Recommender(n_users, n_items, **params),
     }
     if name not in builders:
         raise ValueError(f"Recomendador desconhecido: {name!r}. Opções: {sorted(builders)}")
