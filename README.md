@@ -1,4 +1,4 @@
-# fiap-mlet-challenge-fase-2
+# fiap-mlet-challenge-fase-2 — Sistema de Recomendação
 
 Sistema de recomendação de filmes baseado no comportamento de avaliação dos usuários
 (MovieLens 20M). O modelo central é uma rede neural de fatoração de matrizes treinada com
@@ -15,8 +15,10 @@ flowchart LR
     D --> E
 ```
 
-Para os detalhes de arquitetura, pipeline e do modelo, veja a
-[Documentação](#documentação).
+## Links
+
+- **MLflow (Registry + runs)**: <https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/> —
+  experimentos rastreados e o modelo `MovieLens_BPR_Reco` promovido a `production`.
 
 ## Documentação
 
@@ -28,20 +30,20 @@ Para os detalhes de arquitetura, pipeline e do modelo, veja a
   ruff e estrutura de diretórios.
 - [Guia de contribuição](docs/CONTRIBUTING.md): setup, convenções de Git e validação.
 
-## Gates de commit
+## Como os critérios são atendidos
 
-Este projeto possui validações automatizadas para manter a rastreabilidade do
-histórico Git. As validações rodam localmente via `make` e também no GitHub
-Actions em pushes e pull requests.
+Mapa dos critérios de avaliação do challenge para onde eles vivem no repositório.
 
-Os gates validam:
-
-- **Commits**: devem seguir a especificação de
-  [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#specification).
-- **Branches**: devem seguir a especificação de
-  [Conventional Branch 1.0.0](https://conventional-branch.github.io/#specification).
-- **Tags**: devem usar versionamento semântico no formato `MAJOR.MINOR.PATCH`,
-  por exemplo `1.0.0`, `1.2.3` ou `2.0.0`.
+| Critério | Peso | Onde |
+| -------- | ---- | ---- |
+| Clean code e estrutura | 15% | `src/recsys/` modular; Factory (`models/factory.py`) + Strategy (`preprocessing/`); type hints + docstrings; ruff sem erros → [CODE_GUIDELINES](docs/CODE_GUIDELINES.md) |
+| Reprodutibilidade | 15% | `uv.lock` versionado, `.env` + Pydantic Settings (`config.py`), seed 42 global, `make validate-env` |
+| Docker | 15% | `Dockerfile` multi-stage (builder `uv` + runtime slim non-root), `docker-compose.yml` (train / mlflow / api) |
+| DVC + Pipeline | 15% | `dvc.yaml` com 4 stages (preprocess → feature_eng → train → evaluate), remote no DagsHub, `dvc repro` |
+| Rede neural (PyTorch) | 15% | BPR NeuMF híbrido com early stopping por NDCG@10, comparado a 4 baselines → [MODEL_CARD](docs/MODEL_CARD.md) |
+| MLflow + Registry | 10% | 5 runs por execução rastreados, alias `staging` → `production` → [MLflow](https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/) |
+| Vídeo STAR | 10% | — |
+| Bônus: deploy em nuvem | 5% | — |
 
 ## Instalação
 
@@ -79,57 +81,148 @@ Valide o ambiente (versão do Python, deps críticas, `.env` e acesso ao dataset
 make validate-env
 ```
 
-## Docker
+## Dados e pipeline (DVC)
 
-Imagem multi-stage (builder `uv` + runtime slim, usuário não-root):
+O dataset raw (MovieLens 20M) é versionado com DVC, com remote no DagsHub. O pipeline
+`dvc.yaml` tem 4 stages reproduzíveis por `dvc repro` (ou `make repro`):
 
-```bash
-make docker-build                    # constrói a imagem recsys:local
-docker compose up mlflow             # UI do MLflow em http://localhost:5000
-make docker-train                    # roda o pipeline (preprocess→…→evaluate) no container
+```
+preprocess   filtra/amostra/reindexa data/raw → data/processed/  (20.000 usuários, 13.088 itens)
+feature_eng  split temporal treino/teste (leave-last 20% por usuário)
+train        treina os 5 modelos, loga runs no MLflow, salva em models/
+evaluate     agrega as métricas em comparison.csv + metrics.json
 ```
 
-`docker compose run --rm train` requer o `.env` (DagsHub) e o `data/raw` presente no host
-(monta `./data` e `./models` como volumes). O serviço `mlflow` sobe um servidor local com
-backend sqlite; o treino loga no MLflow do DagsHub, salvo se `MLFLOW_TRACKING_URI` for
-sobrescrito.
+```bash
+make data-pull       # baixa data/raw do remote DagsHub (requer creds)
+make repro           # dvc repro — pipeline reproduzível de ponta a ponta
+make pipeline        # equivalente sem DVC (preprocess → … → evaluate)
+```
+
+## Docker
+
+Imagem multi-stage única (`recsys:local`), reutilizada pelos serviços do compose com
+comandos diferentes — o pipeline e a API compartilham as mesmas dependências.
+
+```bash
+make docker-build    # constrói a imagem recsys:local
+make docker-train    # roda o pipeline completo no container (requer .env + data/raw)
+make docker-mlflow   # sobe a UI do MLflow em http://localhost:5000 (backend sqlite local)
+make docker-api      # sobe a API em http://localhost:8000 (requer models/ treinado)
+```
+
+Os serviços montam `./data` e `./models` como volumes, então os artefatos gerados no
+container persistem no host (e vice-versa). O treino loga no MLflow do DagsHub, salvo se
+`MLFLOW_TRACKING_URI` for sobrescrito.
 
 ## API (FastAPI)
 
-Expõe o modelo final. Requer o pipeline treinado (`models/bpr.pkl` + `models/serving.pkl`).
-Carrega o modelo do Model Registry (alias `production`) quando há credenciais DagsHub, com
-fallback para o pickle local.
+Expõe o modelo final. Carrega o modelo do Model Registry (alias `production`) quando há
+credenciais DagsHub, com **fallback para o pickle local** `models/bpr.pkl`.
 
 ```bash
-make api                             # uvicorn em http://localhost:8000 (ou: docker compose up api)
-curl -i localhost:8000/health        # {"status":"ok",...} + headers X-Request-ID / X-Process-Time
+make api                                     # uvicorn local em http://localhost:8000
+# ou: make docker-api                        # mesma API no container
+curl -i localhost:8000/health               # {"status":"ok",...} + headers X-Request-ID / X-Process-Time
 curl "localhost:8000/recommend?user_id=1"   # top-10 por score (404 se o user não existe)
 # Swagger: http://localhost:8000/docs
 ```
 
-## Como executar as validações
+### Importante: a API exige `models/` treinado e coerente com o código
 
-Para executar todos os gates:
+A API depende de dois artefatos em `models/`, gerados pelo stage `train`:
+
+- `models/serving.pkl` — mapeamentos id↔índice e itens já vistos por usuário (sem fallback);
+- `models/bpr.pkl` — o modelo local, usado como fallback quando o Registry está indisponível
+  (sem creds/rede) ou rejeita as credenciais.
+
+Como o modelo é carregado no startup (readiness via `/health`), se algum artefato faltar
+**ou** estiver desatualizado em relação ao código, o startup falha e `/health` responde
+`503 {"status":"loading"}` — não é "carregando", é falha. O caso mais comum é um `bpr.pkl`
+antigo, picklado contra uma classe que foi renomeada: o unpickle quebra com
+`Can't get attribute '...' on module recsys.models.bpr`.
+
+A correção é sempre **retreinar** para regenerar os pickles com o código atual:
 
 ```bash
-make validate
+make train           # regenera models/*.pkl (incl. bpr.pkl) + serving.pkl
+# ou: make docker-train   (regenera pelo mesmo container que serve a API)
+make api             # reinicia a API; /health volta a "ok"
 ```
 
-Para listar todos os comandos disponíveis:
+## Modelo e resultados
+
+Rede neural **BPR NeuMF híbrido** (GMF + MLP + termos de viés) em PyTorch, com early
+stopping por NDCG@10 e negative sampling ponderado por popularidade. Comparada a 4 baselines
+scikit-learn/NumPy no protocolo de catálogo completo (k = 10, positivos com nota ≥ 3,5,
+NDCG com IC 95% sobre 500 usuários fixos). Valores de `comparison.csv`.
+
+| Modelo | RMSE | NDCG@10 | Coverage |
+| ------ | ---- | ------- | -------- |
+| GlobalMean | 1,047 | 0,009 | 2,1% |
+| Bias | **0,870** | 0,037 | 0,3% |
+| SVD | 0,992 | **0,122** | 3,2% |
+| Popularity | 1,738 | 0,069 | 0,6% |
+| **BPR (neural)** | 1,268 | 0,117 | **5,5%** |
+
+A rede NeuMF **empata estatisticamente com o SVD no ranking** (NDCG@10 0,117 vs 0,122, dentro
+do IC 95%) e entrega a **maior cobertura de catálogo** entre todos os modelos, efeito do
+pop-sampling. Análise completa, hiperparâmetros, limitações e vieses no
+[Model Card](docs/MODEL_CARD.md).
+
+## Reprodutibilidade
+
+- Seed 42 global (torch, RNG NumPy, TruncatedSVD, amostragem de usuários).
+- Configuração única em `configs/config.yaml`, lida por notebook e pipeline.
+- Dados versionados com DVC; dependências fixadas em `uv.lock`.
+- Pipeline reproduzível via `dvc repro` (ou `make pipeline`).
+
+## Estrutura do repositório
+
+```text
+.
+├── configs/            configuração única (config.yaml) lida por pipeline e notebooks
+├── data/               raw (DVC) + processed (gerado pelo pipeline)
+├── docs/               ARCHITECTURE, MODEL_CARD, CODE_GUIDELINES, CONTRIBUTING
+├── models/             artefatos treinados (*.pkl) + serving.pkl
+├── notebooks/          eda.ipynb, models.ipynb
+├── src/recsys/
+│   ├── api/            app FastAPI (app.py) + camada de serving (serving.py)
+│   ├── evaluation/     métricas de regressão, ranking e diversidade
+│   ├── models/         base, baselines, svd, bpr (PyTorch) + factory
+│   ├── pipeline/       preprocess, feature_eng, train, evaluate (stages DVC)
+│   ├── preprocessing/  data, sampling, split (strategies)
+│   ├── config.py       Pydantic Settings (.env > YAML)
+│   ├── io.py           IO de dados e modelos
+│   └── tracking.py     init MLflow + promoção no Registry
+├── tests/
+├── dvc.yaml            pipeline de 4 stages
+├── Dockerfile          multi-stage (builder uv + runtime slim non-root)
+├── docker-compose.yml  serviços train / mlflow / api
+└── pyproject.toml      deps (PEP 621) + uv.lock
+```
+
+## Stack
+
+Python 3.12–3.13 · PyTorch · scikit-learn · MLflow · DVC · FastAPI + uvicorn · Pydantic
+Settings · pandas · uv (deps) · ruff + pytest (dev).
+
+## Gates de commit
+
+Este projeto possui validações automatizadas para manter a rastreabilidade do histórico
+Git. Rodam localmente via `make` e também no GitHub Actions
+(`.github/workflows/validate-conventions.yml`) em pushes e pull requests.
+
+- **Commits**: [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/#specification).
+- **Branches**: [Conventional Branch 1.0.0](https://conventional-branch.github.io/#specification).
+- **Tags**: versionamento semântico `MAJOR.MINOR.PATCH` (ex.: `1.0.0`, `1.2.3`).
 
 ```bash
-make help
+make validate                # roda todos os gates (lint, test, branch, commits, tags)
+make help                    # lista todos os comandos disponíveis
 ```
 
-Validações individuais:
-
-```bash
-make validate-branch
-make validate-commits
-make validate-tags
-```
-
-Também é possível sobrescrever os valores usados pelas validações:
+Validações individuais e overrides:
 
 ```bash
 make validate-branch BRANCH=feat/adicionar-pipeline
@@ -137,65 +230,12 @@ make validate-commits COMMITS_RANGE=origin/main..HEAD
 make validate-tags TAGS="1.0.0 1.1.0"
 ```
 
-## Hooks locais
+### Hooks locais (opcionais)
 
-Os hooks locais são opcionais. Eles só passam a executar automaticamente depois
-que o usuário habilitar explicitamente:
-
-```bash
-make install-hooks
-```
-
-Esse comando configura o repositório para usar os hooks versionados em
-`.githooks/`.
-
-Hooks disponíveis:
-
-- `pre-commit`: valida o nome da branch atual;
-- `commit-msg`: valida a mensagem do commit com Conventional Commits;
-- `pre-push`: valida branch, commits enviados e tags enviadas.
-
-Para desabilitar os hooks locais:
+Só passam a executar automaticamente depois de habilitados; configuram o repositório para
+usar os hooks versionados em `.githooks/`:
 
 ```bash
-make uninstall-hooks
+make install-hooks           # habilita pre-commit / commit-msg / pre-push
+make uninstall-hooks         # desabilita
 ```
-
-## Padrões aceitos
-
-Exemplos de commits válidos:
-
-```text
-feat: add prediction endpoint
-fix(api): handle empty payload
-docs: update setup instructions
-```
-
-Exemplos de branches válidas:
-
-```text
-main
-develop
-feat/adicionar-pipeline
-feature/issue-123-new-login
-fix/corrigir-validacao
-release/v1.2.0
-```
-
-Exemplos de tags válidas:
-
-```text
-0.1.0
-1.0.0
-2.3.4
-```
-
-## GitHub Actions
-
-A pipeline está em `.github/workflows/validate-conventions.yml`.
-
-Ela executa automaticamente:
-
-- validação de branch em pushes e pull requests;
-- validação das mensagens dos commits incluídos no push ou pull request;
-- validação do nome da tag quando o evento for um push de tag.
