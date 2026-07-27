@@ -95,13 +95,18 @@ def ranking_metrics(
     model: ScoreModel, test: pd.DataFrame, seen_by_user: dict[int, set[int]],
     n_items: int, train_counts: np.ndarray, *, k: int = 10,
     like_threshold: float = 4.0, n_users: int = 500, item_batch: int = 2048,
-    seed: int = 42,
+    seed: int = 42, users: np.ndarray | None = None,
 ) -> dict[str, float]:
-    """Precision/Recall/NDCG @k + cobertura, novidade e Gini sobre o catálogo completo."""
+    """Precision/Recall/NDCG @k + cobertura, novidade e Gini sobre o catálogo completo.
+
+    If `users` is provided, use that exact user set (ensures consistent evaluation across models).
+    Otherwise, sample `n_users` from liked users with `seed`.
+    """
     liked = _liked_users(test, like_threshold)
-    users = liked.index.to_numpy()
-    if len(users) > n_users:
-        users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
+    if users is None:
+        users = liked.index.to_numpy()
+        if len(users) > n_users:
+            users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
 
     rows, recommended = [], []
     for u in users:
@@ -111,6 +116,17 @@ def ranking_metrics(
         rows.append((p, r, n))
         recommended.append(top_k)
     return _aggregate(rows, recommended, k, n_items, train_counts)
+
+
+def get_ranking_users(
+    test: pd.DataFrame, like_threshold: float, n_users: int = 500, seed: int = 42,
+) -> np.ndarray:
+    """Get a fixed set of users for ranking evaluation (consistent across models)."""
+    liked = _liked_users(test, like_threshold)
+    users = liked.index.to_numpy()
+    if len(users) > n_users:
+        users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
+    return users
 
 
 def _aggregate(

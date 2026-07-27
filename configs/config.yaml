@@ -1,27 +1,19 @@
-# Fonte única de hiperparâmetros do pipeline (lida pelo Pydantic Settings e,
-# na Task 3, pelo dvc.yaml como `params`). Valores de ambiente/secret (MLflow,
-# DagsHub token) ficam no .env e sobrepõem este arquivo.
 seed: 42
-
 paths:
   raw: data/raw
   processed: data/processed
   models: models
-
 data:
   min_user_ratings: 20
   min_item_ratings: 20
   n_users_sample: 20000
   test_frac: 0.2
-
 eval:
   like_threshold: 4.0
   ranking_n_users: 500
   ranking_item_batch: 2048
-
 mlflow:
   experiment_name: MovieLens-Reco-Etapa2-Modelagem
-
 models:
   bias:
     reg: 10.0
@@ -29,12 +21,22 @@ models:
     n_components: 50
     seed: 42
   bpr:
-    emb_dim: 128
-    lr: 0.005
-    weight_decay: 1.0e-5
+    mf_emb_dim: 128
+    mlp_emb_dim: 128
+    mlp_layers:
+    - 256
+    - 128
+    - 64
+    dropout: 0.2
+    lr: 0.001
+    weight_decay: 0.0001
     n_neg: 10
     batch_size: 2048
-    epochs: 40
-    patience: 6
-    val_users: 300
-    like_threshold: 4.0
+    epochs: 100
+    patience: 15
+    grad_clip_norm: 1.0
+    scheduler_t0: 25
+    pop_alpha: 0.75
+    val_users: 1000
+    val_item_batch: 4096
+    like_threshold: 3.5
