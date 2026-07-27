@@ -17,10 +17,7 @@ Melhorias sobre o BPR-MF original:
 3.  **Regularização melhorada:** Dropout nos embeddings MLP e nas camadas
     densas, weight decay mais agressivo e gradient clipping.
 
-4.  **LR scheduler:** CosineAnnealingWarmRestarts para escapar de platôs
-    locais e melhorar convergência.
-
-5.  **Predição calibrada:** ``predict`` aplica ``mu + (pred - mu_pred)
+4.  **Predição calibrada:** ``predict`` aplica ``mu + (pred - mu_pred)
      * (sigma_ratings / sigma_pred)`` para alinhar a escala de scores BPR
      com ratings reais, melhorando o RMSE sem afetar a ordenação do ranking.
 """
@@ -133,7 +130,6 @@ DEFAULT_PARAMS: dict = {
     "epochs": 60,
     "patience": 8,
     "grad_clip_norm": 1.0,
-    "scheduler_t0": 10,    # CosineAnnealingWarmRestarts T_0
 
     # Negatives
     "pop_alpha": 0.75,      # Popularity weighting exponent (0 = uniform)
@@ -230,21 +226,18 @@ class BPRRecommender(Recommender):
         return DataLoader(ds, batch_size=self.params["batch_size"], shuffle=True)
 
     def _train_loop(self, loader, sampler, val, seen_by_user) -> dict:
+        # ponytail: constant-LR AdamW; early stopping does the work. Val NDCG peaks
+        # ~epoch 3, so a warm-restart scheduler (T_0=25) never completed a cycle.
         opt = self._optimizer()
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            opt, T_0=self.params["scheduler_t0"], T_mult=2,
-        )
         history = {"train_loss": [], "val_ndcg": []}
         best_ndcg, best_state, since = -1.0, None, 0
 
         for epoch in range(1, self.params["epochs"] + 1):
             loss = self._train_epoch(loader, sampler, opt)
-            scheduler.step()
             ndcg = self._val_ndcg(val, seen_by_user)
             history["train_loss"].append(loss)
             history["val_ndcg"].append(ndcg)
-            print(f"  epoca {epoch:02d} | BPR loss {loss:.4f} | "
-                  f"lr {scheduler.get_last_lr()[0]:.2e} | val NDCG@10 {ndcg:.4f}")
+            print(f"  epoca {epoch:02d} | BPR loss {loss:.4f} | val NDCG@10 {ndcg:.4f}")
             if ndcg > best_ndcg:
                 best_ndcg, best_state, since = ndcg, self._snapshot(), 0
             else:

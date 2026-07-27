@@ -22,7 +22,7 @@ Para os detalhes de arquitetura, pipeline e do modelo, veja a
 
 - [Arquitetura](docs/ARCHITECTURE.md): estrutura do pacote, fluxo do pipeline DVC, design
   patterns, MLflow/Registry e camada de serving.
-- [Model Card](docs/MODEL_CARD.md): modelo BPR-MF, dados, hiperparâmetros, métricas,
+- [Model Card](docs/MODEL_CARD.md): modelo BPR (NeuMF híbrido), dados, hiperparâmetros, métricas,
   comparação com baselines, limitações e vieses.
 - [Diretrizes de código](docs/CODE_GUIDELINES.md): clean code, SOLID, design patterns,
   ruff e estrutura de diretórios.

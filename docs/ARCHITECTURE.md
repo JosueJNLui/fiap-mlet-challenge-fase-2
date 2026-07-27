@@ -50,7 +50,8 @@ Três padrões estruturam o código dos modelos e do pré-processamento:
   `ValueError` para nomes desconhecidos. O pipeline de treino cria todos os modelos por aqui.
 - **Strategy**: `preprocessing/split.py` (`TemporalLeaveLastFraction` como padrão,
   `RandomHoldout` como controle) e `preprocessing/sampling.py`
-  (`NegativeSampler` como interface, `UniformNegativeSampler` como estratégia).
+  (`NegativeSampler` como interface, `UniformNegativeSampler` e
+  `PopularityWeightedNegativeSampler` — esta última a usada pelo BPR — como estratégias).
 - **Template Method**: `models/base.py::Recommender.evaluate` fixa o esqueleto de
   avaliação (regressão, depois ranking e diversidade), delegando `fit`/`predict` às
   subclasses. `recommend` (top-k por score) também tem implementação padrão na base.

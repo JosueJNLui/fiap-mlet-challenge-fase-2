@@ -9,7 +9,7 @@ data:
   n_users_sample: 20000
   test_frac: 0.2
 eval:
-  like_threshold: 4.0
+  like_threshold: 3.5
   ranking_n_users: 500
   ranking_item_batch: 2048
 mlflow:
@@ -18,7 +18,7 @@ models:
   bias:
     reg: 10.0
   svd:
-    n_components: 50
+    n_components: 64
     seed: 42
   bpr:
     mf_emb_dim: 128
@@ -35,7 +35,6 @@ models:
     epochs: 100
     patience: 15
     grad_clip_norm: 1.0
-    scheduler_t0: 25
     pop_alpha: 0.75
     val_users: 1000
     val_item_batch: 4096

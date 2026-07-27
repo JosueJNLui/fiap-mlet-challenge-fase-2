@@ -135,14 +135,24 @@ def _aggregate(
 ) -> dict[str, float]:
     """Consolida ranking (média) e diversidade (sobre o top-k agregado)."""
     p, r, n = np.mean(rows, axis=0)
+    # ponytail: normal-approx half-width (1.96·SE) on the NDCG@k mean, so model
+    # gaps can be read against noise. Bootstrap if the zero-inflation ever bites.
+    ndcg_vals = np.array([row[2] for row in rows], dtype=float)
+    ndcg_ci = (1.96 * ndcg_vals.std(ddof=1) / np.sqrt(len(ndcg_vals))
+               if len(ndcg_vals) > 1 else 0.0)
     rec = np.concatenate(recommended) if recommended else np.empty(0, dtype=np.int64)
     rec_counts = np.bincount(rec, minlength=n_items)
-    log_pop = np.log1p(train_counts[rec]) if len(rec) else np.array([0.0])
+    # ponytail: novidade = auto-informação -log2(p(i)), p suavizado (+1) p/ itens sem
+    # histórico. Maior = itens mais raros/nicho. (Antes: média de log-popularidade — invertido.)
+    n_interactions = float(train_counts.sum()) or 1.0
+    rec_pop = train_counts[rec] if len(rec) else np.array([0.0])
+    novelty = float(np.mean(-np.log2((rec_pop + 1.0) / n_interactions)))
     return {
         f"precision_at_{k}": float(p),
         f"recall_at_{k}": float(r),
         f"ndcg_at_{k}": float(n),
+        f"ndcg_at_{k}_ci": float(ndcg_ci),
         "coverage": float((rec_counts > 0).sum() / n_items),
-        "novelty": float(np.mean(log_pop)),
+        "novelty": novelty,
         "gini": _gini(rec_counts.astype(float)),
     }

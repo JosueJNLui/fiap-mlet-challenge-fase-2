@@ -49,6 +49,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# starlette.testclient avisa da migração httpx->httpx2 dentro da própria lib; não é código nosso.
+filterwarnings = ["ignore::starlette.exceptions.StarletteDeprecationWarning"]
 
 [tool.uv]
 package = false
