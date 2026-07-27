@@ -108,21 +108,21 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
 | ------ | ---- | --- | -- | ---- | ---- | ------- | -------- | ------- | ---- |
 | GlobalMean | 1,047 | 0,829 | -0,005 | 0,004 | 0,003 | 0,009 | 0,021 | 17,23 | 0,995 |
 | Bias | **0,870** | **0,665** | **0,306** | 0,025 | 0,022 | 0,037 | 0,003 | 10,39 | 0,999 |
-| SVD | 0,992 | 0,778 | 0,099 | **0,097** | **0,079** | **0,122** | 0,032 | 9,50 | 0,987 |
+| SVD | 0,992 | 0,778 | 0,099 | **0,097** | 0,079 | **0,122** | 0,032 | 9,50 | 0,987 |
 | Popularity | 1,738 | 1,412 | -1,767 | 0,053 | 0,041 | 0,069 | 0,006 | 8,41 | 0,998 |
-| **BPR (neural)** | 1,397 | 1,131 | -0,789 | 0,083 | 0,071 | 0,103 | **0,087** | **10,37** | **0,959** |
+| **BPR (neural)** | 1,268 | 1,024 | -0,474 | 0,092 | **0,081** | 0,117 | **0,055** | 9,77 | **0,979** |
 
 - **Melhor RMSE**: Bias (0,870). **Melhor NDCG@10 (valor nominal)**: SVD (0,122). A promoção a
   `production` no Registry usa o critério de NDCG@10.
-- **Ranking: empate estatístico entre SVD e BPR.** SVD 0,122 ± 0,015 vs BPR 0,103 ± 0,015;
-  a diferença (0,020) cai **dentro do IC 95% da diferença** (± 0,021) — não é significativa
+- **Ranking: empate estatístico entre SVD e BPR.** SVD 0,122 ± 0,015 vs BPR 0,117 ± 0,015;
+  a diferença (0,006) cai **bem dentro do IC 95% da diferença** (± 0,022) — não é significativa
   com 500 usuários. A rede NeuMF empata com o SVD no ranking, sem superá-lo. (O NDCG@10 do
-  BPR ainda varia ~0,003 entre execuções idênticas por não-determinismo de GPU/MPS, dentro
-  do próprio IC — mais uma evidência do empate.)
-- **Diversidade: o ganho real do BPR.** Coverage 8,7% vs 3,2% do SVD (2,7×), Gini 0,959 vs
-  0,987 (menos concentrado) e recomendações mais de nicho — maior novidade/auto-informação
-  (novelty 10,37 vs 9,50 do SVD; a `Popularity` é a menos novel, 8,41, como esperado). Efeito
-  direto do pop-sampling.
+  BPR varia entre execuções por não-determinismo de GPU/MPS, dentro do próprio IC — mais uma
+  evidência do empate.)
+- **Diversidade: o diferencial do BPR.** Coverage 5,5% vs 3,2% do SVD (1,7×) — a maior
+  cobertura de catálogo entre todos os modelos —, Gini 0,979 vs 0,987 (menos concentrado) e
+  recomendações um pouco mais de nicho (novelty 9,77 vs 9,50 do SVD; a `Popularity` é a menos
+  novel, 8,41, como esperado). Efeito direto do pop-sampling.
 - **Por que o BPR tem RMSE/MAE/R2 ruins**: é um modelo de ranking. A calibração z-score
   coloca o score na escala [0,5; 5,0], mas os valores não são notas confiáveis (R2 negativo,
   pior que a média global). O valor do BPR está no ranking e na diversidade, não na regressão.
@@ -136,7 +136,7 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
   modelos usam só IDs de interação. Isso limita cold-start e interpretabilidade.
 - **Viés de popularidade e concentração**: Gini alto (0,96–0,99) e coverage baixa indicam
   que as recomendações se concentram numa fração dos 13.088 itens. O BPR mitiga isso
-  (coverage 8,7%, Gini 0,959), mas não elimina.
+  (coverage 5,5%, Gini 0,979), mas não elimina.
 - **Viés de amostragem**: só 20.000 usuários (de aproximadamente 138 mil) e apenas
   usuários e itens com pelo menos 20 interações. O modelo é treinado sobre usuários ativos
   e itens populares, não sobre a distribuição completa.
