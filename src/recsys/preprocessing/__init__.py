@@ -7,7 +7,11 @@ from recsys.preprocessing.data import (
     reindex,
     sample_users,
 )
-from recsys.preprocessing.sampling import NegativeSampler, UniformNegativeSampler
+from recsys.preprocessing.sampling import (
+    NegativeSampler,
+    PopularityWeightedNegativeSampler,
+    UniformNegativeSampler,
+)
 from recsys.preprocessing.split import (
     RandomHoldout,
     SplitStrategy,
@@ -16,6 +20,7 @@ from recsys.preprocessing.split import (
 
 __all__ = [
     "NegativeSampler",
+    "PopularityWeightedNegativeSampler",
     "RandomHoldout",
     "SplitStrategy",
     "TemporalLeaveLastFraction",

@@ -45,3 +45,42 @@ class UniformNegativeSampler(NegativeSampler):
             draw = self.rng.integers(0, self.n_items, size=(n_neg - len(picked)) * 4)
             picked.extend(int(i) for i in draw if i not in seen)
         return np.array(picked[:n_neg], dtype=np.int64)
+
+
+class PopularityWeightedNegativeSampler(NegativeSampler):
+    """Amostra negativos com probabilidade proporcional à popularidade ``counts^alpha``.
+
+    Visa quebrar o viés de popularidade: itens populares aparecem como negativos
+    com mais frequência, forçando o modelo a aprender preferências reais em vez
+    de simplesmente recomendar blockbusters. O hiperparâmetro ``alpha`` controla
+    a intensidade da ponderação (0 = uniforme, 1 = proporcional às contagens).
+    """
+
+    def __init__(
+        self, n_items: int, seen_by_user: dict[int, set[int]],
+        item_counts: np.ndarray, alpha: float = 0.75, seed: int = 42,
+    ) -> None:
+        self.n_items = n_items
+        self.seen_by_user = seen_by_user
+        self.alpha = alpha
+        self.rng = np.random.default_rng(seed)
+        counts = item_counts.astype(np.float64)
+        counts[counts < 1] = 1.0
+        self.probs = (counts ** alpha) / (counts ** alpha).sum()
+        self.items = np.arange(n_items, dtype=np.int64)
+
+    def sample(self, users: np.ndarray, n_neg: int) -> np.ndarray:
+        out = np.empty((len(users), n_neg), dtype=np.int64)
+        for row, user in enumerate(users):
+            seen = self.seen_by_user.get(int(user), ())
+            out[row] = self._sample_unseen(seen, n_neg)
+        return out
+
+    def _sample_unseen(self, seen, n_neg: int) -> np.ndarray:
+        """Rejeição com ponderação: sorteia com peso, descarta vistos."""
+        picked: list[int] = []
+        while len(picked) < n_neg:
+            draw = self.rng.choice(self.items, size=(n_neg - len(picked)) * 4,
+                                   p=self.probs)
+            picked.extend(int(i) for i in draw if i not in seen)
+        return np.array(picked[:n_neg], dtype=np.int64)

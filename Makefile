@@ -114,3 +114,6 @@ docker-train: ## Roda o pipeline completo em um container (requer .env + data/ra
 
 docker-mlflow: ## Sobe a UI local do MLflow em http://localhost:5000.
 	docker compose up mlflow
+
+docker-api: ## Sobe a API em um container em http://localhost:8000 (requer models/).
+	docker compose up api

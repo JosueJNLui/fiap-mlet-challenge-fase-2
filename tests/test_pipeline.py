@@ -17,7 +17,7 @@ def test_settings_loads_yaml_defaults() -> None:
     s = load_settings()
     assert s.data.n_users_sample == 20000
     assert s.data.min_user_ratings == 20
-    assert s.models["bpr"]["emb_dim"] == 128
+    assert s.models["bpr"]["mf_emb_dim"] == 128
     assert s.mlflow.experiment_name == "MovieLens-Reco-Etapa2-Modelagem"
 
 

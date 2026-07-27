@@ -95,13 +95,18 @@ def ranking_metrics(
     model: ScoreModel, test: pd.DataFrame, seen_by_user: dict[int, set[int]],
     n_items: int, train_counts: np.ndarray, *, k: int = 10,
     like_threshold: float = 4.0, n_users: int = 500, item_batch: int = 2048,
-    seed: int = 42,
+    seed: int = 42, users: np.ndarray | None = None,
 ) -> dict[str, float]:
-    """Precision/Recall/NDCG @k + cobertura, novidade e Gini sobre o catálogo completo."""
+    """Precision/Recall/NDCG @k + cobertura, novidade e Gini sobre o catálogo completo.
+
+    If `users` is provided, use that exact user set (ensures consistent evaluation across models).
+    Otherwise, sample `n_users` from liked users with `seed`.
+    """
     liked = _liked_users(test, like_threshold)
-    users = liked.index.to_numpy()
-    if len(users) > n_users:
-        users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
+    if users is None:
+        users = liked.index.to_numpy()
+        if len(users) > n_users:
+            users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
 
     rows, recommended = [], []
     for u in users:
@@ -113,20 +118,41 @@ def ranking_metrics(
     return _aggregate(rows, recommended, k, n_items, train_counts)
 
 
+def get_ranking_users(
+    test: pd.DataFrame, like_threshold: float, n_users: int = 500, seed: int = 42,
+) -> np.ndarray:
+    """Get a fixed set of users for ranking evaluation (consistent across models)."""
+    liked = _liked_users(test, like_threshold)
+    users = liked.index.to_numpy()
+    if len(users) > n_users:
+        users = np.random.default_rng(seed).choice(users, size=n_users, replace=False)
+    return users
+
+
 def _aggregate(
     rows: list[tuple], recommended: list[np.ndarray], k: int,
     n_items: int, train_counts: np.ndarray,
 ) -> dict[str, float]:
     """Consolida ranking (média) e diversidade (sobre o top-k agregado)."""
     p, r, n = np.mean(rows, axis=0)
+    # ponytail: normal-approx half-width (1.96·SE) on the NDCG@k mean, so model
+    # gaps can be read against noise. Bootstrap if the zero-inflation ever bites.
+    ndcg_vals = np.array([row[2] for row in rows], dtype=float)
+    ndcg_ci = (1.96 * ndcg_vals.std(ddof=1) / np.sqrt(len(ndcg_vals))
+               if len(ndcg_vals) > 1 else 0.0)
     rec = np.concatenate(recommended) if recommended else np.empty(0, dtype=np.int64)
     rec_counts = np.bincount(rec, minlength=n_items)
-    log_pop = np.log1p(train_counts[rec]) if len(rec) else np.array([0.0])
+    # ponytail: novidade = auto-informação -log2(p(i)), p suavizado (+1) p/ itens sem
+    # histórico. Maior = itens mais raros/nicho. (Antes: média de log-popularidade — invertido.)
+    n_interactions = float(train_counts.sum()) or 1.0
+    rec_pop = train_counts[rec] if len(rec) else np.array([0.0])
+    novelty = float(np.mean(-np.log2((rec_pop + 1.0) / n_interactions)))
     return {
         f"precision_at_{k}": float(p),
         f"recall_at_{k}": float(r),
         f"ndcg_at_{k}": float(n),
+        f"ndcg_at_{k}_ci": float(ndcg_ci),
         "coverage": float((rec_counts > 0).sum() / n_items),
-        "novelty": float(np.mean(log_pop)),
+        "novelty": novelty,
         "gini": _gini(rec_counts.astype(float)),
     }
