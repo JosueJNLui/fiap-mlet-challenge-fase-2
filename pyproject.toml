@@ -3,7 +3,7 @@ name = "fiap-mlet-challenge-fase-2"
 version = "0.1.0"
 description = "Sistema de recomendação de filmes (MovieLens) com rede neural BPR em PyTorch, baselines scikit-learn, pipeline DVC, tracking MLflow e API FastAPI."
 readme = "README.md"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "dagshub>=0.7.0",
     "fastapi>=0.137.1",
@@ -49,6 +49,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# starlette.testclient avisa da migração httpx->httpx2 dentro da própria lib; não é código nosso.
+filterwarnings = ["ignore::starlette.exceptions.StarletteDeprecationWarning"]
 
 [tool.uv]
 package = false

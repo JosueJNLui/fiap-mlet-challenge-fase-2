@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix
 from sklearn.decomposition import TruncatedSVD
 
 from recsys.models.base import Recommender
+from recsys.preprocessing.data import item_train_counts
 
 
 class SVDRecommender(Recommender):
@@ -22,8 +23,10 @@ class SVDRecommender(Recommender):
         self.n_items = n_items
         self.n_components = n_components
         self.seed = seed
+        self._train_df: pd.DataFrame | None = None
 
     def fit(self, train: pd.DataFrame) -> SVDRecommender:
+        self._train_df = train
         self.mu = float(train["rating"].mean())
         matrix = csr_matrix(
             (train["rating"].to_numpy() - self.mu,
@@ -34,6 +37,13 @@ class SVDRecommender(Recommender):
         self.user_factors = svd.fit_transform(matrix)
         self.item_factors = svd.components_.T
         return self
+
+    @property
+    def train_counts(self) -> np.ndarray:
+        """Contagens de itens no treino EFETIVO."""
+        if self._train_df is None:
+            raise RuntimeError("Model not fitted yet; call fit() first.")
+        return item_train_counts(self._train_df, self.n_items)
 
     def predict(self, users: np.ndarray, items: np.ndarray) -> np.ndarray:
         dot = np.sum(self.user_factors[users] * self.item_factors[items], axis=1)

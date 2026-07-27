@@ -31,10 +31,10 @@ def create_recommender(
     """
     builders = {
         "global_mean": lambda: GlobalMeanRecommender(),
-        "bias": lambda: BiasRecommender(n_users, n_items, **params),
+        "bias": lambda: BiasRecommender(n_users, n_items, reg=params.get("reg", 10.0)),
         "svd": lambda: SVDRecommender(n_users, n_items, **params),
-        "popularity": lambda: PopularityRecommender(n_items),
-        "bpr": lambda: BPRRecommender(n_users, n_items, **params),
+        "popularity": lambda: PopularityRecommender(),
+        "bpr": lambda: BPRRecommender(n_users, n_items, params=params),
     }
     if name not in builders:
         raise ValueError(f"Recomendador desconhecido: {name!r}. Opções: {sorted(builders)}")
