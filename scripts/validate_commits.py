@@ -55,6 +55,11 @@ def validate_message(message: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def should_skip_message(message: str) -> bool:
+    normalized = " ".join(message.split())
+    return normalized.lower() == "initial commit"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Validate commit messages against Conventional Commits 1.0.0."
@@ -73,12 +78,18 @@ def main() -> int:
     failures: list[tuple[str, str]] = []
 
     if args.message is not None:
-        result = validate_message(args.message)
-        if result.returncode != 0:
-            failures.append(("provided message", result.stderr or result.stdout))
+        if should_skip_message(args.message):
+            print("Skipping initial commit message.")
+        else:
+            result = validate_message(args.message)
+            if result.returncode != 0:
+                failures.append(("provided message", result.stderr or result.stdout))
     else:
         for commit in commit_hashes(args.revision_range):
             message = commit_message(commit)
+            if should_skip_message(message):
+                continue
+
             result = validate_message(message)
             if result.returncode != 0:
                 subject = message.splitlines()[0] if message else "<empty>"
