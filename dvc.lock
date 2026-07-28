@@ -89,8 +89,8 @@ stages:
       size: 24310160
     - path: src/recsys/api/serving.py
       hash: md5
-      md5: 9df85a9dfa15f4140444c31dc880f132
-      size: 5668
+      md5: 16e65b87bf10eb987d939290212cd672
+      size: 5929
     - path: src/recsys/evaluation
       hash: md5
       md5: 72f6210ba2b0fd5edc907a54a0e8eff0.dir
@@ -98,8 +98,8 @@ stages:
       nfiles: 2
     - path: src/recsys/models
       hash: md5
-      md5: c24e2246cbf09870ebb46e98a3d3c7f5.dir
-      size: 23853
+      md5: 896086cdc734e2354266941bf981e229.dir
+      size: 24146
       nfiles: 6
     - path: src/recsys/pipeline/train.py
       hash: md5

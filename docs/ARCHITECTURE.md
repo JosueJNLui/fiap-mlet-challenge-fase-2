@@ -83,12 +83,17 @@ Reproduzível com `dvc repro` (ou `make pipeline` para rodar os módulos direto)
 - **Backend**: MLflow no DagsHub. `init_mlflow` exige `DAGSHUB_TOKEN` e falha de forma
   explícita se ausente (não há fallback local no tracking).
 - **Experimento**: `MovieLens-Reco-Etapa2-Modelagem`.
+- **Runs por execução**: 6 — uma por modelo (`train.py`) mais a `model_comparison_summary`
+  (`evaluate.py`).
 - **Por modelo** (`train.py`): loga `params` (hiperparâmetros achatados, `n_users`,
-  `n_items`, `seed`), `metrics` (as 10 métricas) e tags (`etapa`, `stage`, `model`,
-  `dataset_version_dvc`, `ranking_protocol=full_catalog`).
+  `n_items`, `seed`), `metrics` (as 11 colunas de métricas, IC incluso) e tags (`etapa`,
+  `stage`, `model`, `seed`, `n_users`, `n_items`, `dataset_version_dvc`,
+  `ranking_protocol=full_catalog`).
 - **Registro** (`tracking.py::log_recommender`): cada modelo é embrulhado em
   `RecommenderPyfunc` (um `mlflow.pyfunc.PythonModel`), logado com assinatura inferida e
-  registrado como `MovieLens_<Label>_Reco` (por exemplo `MovieLens_BPR_Reco`).
+  registrado como `MovieLens_<Label>_Reco` (por exemplo `MovieLens_BPR_Reco`). O pipeline é
+  o **único** produtor de versões no Registry: `notebooks/models.ipynb` loga runs mas não
+  registra modelos, para que toda versão tenha o mesmo contrato pyfunc que a API consome.
 - **Promoção** (`tracking.py::promote_to_production`): o modelo promovido é o **servido**
   (`SERVED_MODEL`, default `MovieLens_BPR_Reco` — a rede neural), não o melhor NDCG@10
   nominal: SVD e BPR empatam dentro do IC 95% e o BPR vence em diversidade (ver

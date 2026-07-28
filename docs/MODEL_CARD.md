@@ -70,6 +70,7 @@ apenas fallback.
 | `grad_clip_norm` | 1,0 |
 | `pop_alpha` (peso de popularidade) | 0,75 |
 | `val_users` | 1000 |
+| `val_item_batch` | 4096 |
 | `like_threshold` | 3,5 |
 | `seed` | 42 |
 
@@ -85,11 +86,16 @@ apenas fallback.
 
 ## Métricas e comparação com baselines
 
-Métricas da execução com a configuração única de `configs/config.yaml` (reprodutível pelo
-notebook e por `dvc repro` → `comparison.csv`/`metrics.json`). Protocolo de catálogo completo:
-para cada usuário, ranqueia todos os itens não vistos; k = 10; positivos com nota ≥ 3,5.
-São 10 métricas em três grupos: regressão (RMSE, MAE, MSE, R2), ranking (Precision@10,
-Recall@10, NDCG@10) e diversidade (coverage, novelty, Gini).
+Métricas da execução do pipeline (`dvc repro` → `comparison.csv`/`metrics.json`), com a
+configuração única de `configs/config.yaml`. **Esses arquivos são a fonte canônica dos
+números** — `notebooks/models.ipynb` roda os mesmos modelos pela mesma config, mas é uma
+demonstração da orquestração: como o treino do BPR é não-determinístico, seus valores
+oscilam dentro do IC e não substituem o `comparison.csv`.
+
+Protocolo de catálogo completo: para cada usuário, ranqueia todos os itens não vistos;
+k = 10; positivos com nota ≥ 3,5. São 11 colunas em três grupos: regressão (RMSE, MAE,
+MSE, R2), ranking (Precision@10, Recall@10, NDCG@10 e o half-width do IC 95%) e
+diversidade (coverage, novelty, Gini).
 
 **Avaliação justa:** o ranking usa o **mesmo conjunto fixo de 500 usuários** para todos os
 modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·EP).
@@ -160,7 +166,9 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
 Registrado como `MovieLens_BPR_Reco` — o modelo servido pela API e promovido a
 `production`. Cada versão recebe o alias `staging`; o alias `production` só migra quando o
 NDCG@10 supera o da produção atual do mesmo modelo. Os baselines também são registrados
-(`MovieLens_<Label>_Reco`) para comparação, mas não recebem `production`.
+(`MovieLens_<Label>_Reco`: `GlobalMean`, `Bias`, `SVD`, `Popularity`) para comparação, mas
+não recebem `production`. **Só o pipeline (`train`/`evaluate`) escreve no Registry** — o
+notebook apenas loga runs, para não criar versões com outro formato de artefato.
 
 O modelo servido é configurável por `SERVED_MODEL` no `.env`: apontar para
 `MovieLens_SVD_Reco` permite A/B testar o melhor baseline sem deploy de código — exige que a
@@ -179,10 +187,10 @@ Estado atual do Registry:
 
 | Alias | Versão | NDCG@10 | Coverage |
 | ----- | ------ | ------- | -------- |
-| `production` (servido pela API) | v11 | **0,117** | 5,5% |
-| `staging` (última execução, tabela acima) | v13 | 0,114 | 9,2% |
+| `production` (servido pela API) | v11 | **0,1165** | 5,5% |
+| `staging` (última execução, tabela acima) | v13 | 0,1141 | 9,2% |
 
-A v13 ficou 0,002 abaixo em NDCG@10 — dentro do próprio IC (± 0,014), ou seja, ruído — e o
+A v13 ficou 0,0024 abaixo em NDCG@10 — dentro do próprio IC (± 0,014), ou seja, ruído — e o
 gate barrou a promoção, mantendo a v11. É o comportamento pretendido: o alias `production`
 não regride por variação de execução. Note que a v13 é melhor em diversidade (coverage
 9,2% vs 5,5%); promovê-la exigiria um critério multi-métrica, não um override manual.

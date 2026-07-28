@@ -1,9 +1,11 @@
 """Camada de serving: artefato self-contained + carga do modelo para a API.
 
-A API depende só de ``models/`` (não do dataset de treino): o pipeline persiste um
-``serving.pkl`` com os mapeamentos id-cru↔índice e os itens já vistos por usuário. O modelo
-vem do Model Registry (alias ``production``) quando há credenciais, com fallback para o
-pickle local ``models/bpr.pkl``.
+A API não depende do dataset de treino: o pipeline persiste um ``serving.pkl`` com os
+mapeamentos id-cru↔índice e os itens já vistos por usuário. Esse artefato vem de
+``models/serving.pkl`` ou, se não existir localmente, é baixado do run em ``production``
+(com credenciais, a API sobe sem nenhum arquivo local). O modelo vem do Model Registry
+(alias ``production``) quando há credenciais, com fallback para o pickle local
+``models/<served_label>.pkl``.
 """
 
 from __future__ import annotations
@@ -46,11 +48,10 @@ def build_serving_artifact(settings: Settings) -> Path:
 class _RegistryRecommender(Recommender):
     """Adapta o pyfunc do Registry à interface ``Recommender`` (herda ``recommend``)."""
 
-    name = "BPR"
-
-    def __init__(self, pyfunc, n_items: int) -> None:
+    def __init__(self, pyfunc, n_items: int, label: str = "BPR") -> None:
         self._pyfunc = pyfunc
         self.n_items = n_items
+        self.name = label  # segue SERVED_MODEL: não é sempre a rede neural
 
     def fit(self, train: pd.DataFrame) -> _RegistryRecommender:  # noqa: ARG002 - serving-only
         return self
@@ -81,7 +82,7 @@ def load_model_prod(settings: Settings, n_items: int) -> Recommender:
         init_mlflow(settings)
         pyfunc = mlflow.pyfunc.load_model(f"models:/{settings.served_model}@production")
         logger.info("modelo carregado do Registry (%s@production)", settings.served_model)
-        return _RegistryRecommender(pyfunc, n_items)
+        return _RegistryRecommender(pyfunc, n_items, settings.served_label)
     except Exception as exc:  # noqa: BLE001 - sem creds/rede/alias → fallback local
         # lower() casa com o nome do pickle para BPR/SVD/Bias/Popularity (não p/ GlobalMean,
         # que nunca é servido); se isso mudar, use o mapa nome↔rótulo de evaluate.py.

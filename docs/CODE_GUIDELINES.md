@@ -48,7 +48,8 @@ Padrões de clean code aplicados no projeto desde a primeira linha (Etapa 1). O 
 
 O projeto usa **ruff** (config em `pyproject.toml`):
 
-- `line-length = 100`, `target-version = "py313"`.
+- `line-length = 100`, `target-version = "py312"` (a menor versão suportada em
+  `requires-python = ">=3.12,<3.14"`).
 - Regras selecionadas: `E`, `F`, `I`, `UP`, `B`, `SIM`.
 
 Rode o lint com:
