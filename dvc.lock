@@ -10,8 +10,8 @@ stages:
       nfiles: 6
     - path: src/recsys/config.py
       hash: md5
-      md5: 1e7f9e126c3a792b6856aae0eb1d4047
-      size: 2976
+      md5: 771f2e08c6835bf1147e75de5355073d
+      size: 3396
     - path: src/recsys/io.py
       hash: md5
       md5: d2aabd61832674e108626f818756e2c7
@@ -50,8 +50,8 @@ stages:
       size: 30308674
     - path: src/recsys/pipeline/feature_eng.py
       hash: md5
-      md5: dcb804f336e72179695d8a5db457561b
-      size: 977
+      md5: c44680f7f624251d56f1edf55f0596f2
+      size: 968
     - path: src/recsys/preprocessing/split.py
       hash: md5
       md5: fc14c39e2b9b92e8c449c4e6a2dddcf2
@@ -71,6 +71,10 @@ stages:
   train:
     cmd: PYTHONPATH=src uv run python -m recsys.pipeline.train
     deps:
+    - path: data/processed/interactions.parquet
+      hash: md5
+      md5: f736f02310ab1a115470d4d431b54041
+      size: 30308674
     - path: data/processed/meta.json
       hash: md5
       md5: 67aeb197f7cbe497cb8c65e459ef595f
@@ -83,28 +87,32 @@ stages:
       hash: md5
       md5: 1d294a76c056988408f30209cb74cd0c
       size: 24310160
+    - path: src/recsys/api/serving.py
+      hash: md5
+      md5: 16e65b87bf10eb987d939290212cd672
+      size: 5929
     - path: src/recsys/evaluation
       hash: md5
-      md5: d7f8a9df35daf7fd0a9ff2b98d3aa56a.dir
-      size: 15178
-      nfiles: 4
+      md5: 72f6210ba2b0fd5edc907a54a0e8eff0.dir
+      size: 6869
+      nfiles: 2
     - path: src/recsys/models
       hash: md5
-      md5: dca880967f6bd7d90aa17e5f372c9d5e.dir
-      size: 45377
-      nfiles: 12
+      md5: 896086cdc734e2354266941bf981e229.dir
+      size: 24146
+      nfiles: 6
     - path: src/recsys/pipeline/train.py
       hash: md5
-      md5: f470bcf874ef75f438e897ed25795717
-      size: 3640
+      md5: 3eeaa54d577129ece52f7a067f0b9942
+      size: 3967
     - path: src/recsys/tracking.py
       hash: md5
-      md5: 4172c84f7e50786017f1998b0660ed2a
-      size: 2293
+      md5: fae6464775f66cfff5392653e52dc520
+      size: 3504
     params:
       configs/config.yaml:
         eval:
-          like_threshold: 4.0
+          like_threshold: 3.5
           ranking_n_users: 500
           ranking_item_batch: 2048
         mlflow:
@@ -113,91 +121,104 @@ stages:
           bias:
             reg: 10.0
           svd:
-            n_components: 50
+            n_components: 64
             seed: 42
           bpr:
-            emb_dim: 128
-            lr: 0.005
-            weight_decay: 1e-05
+            mf_emb_dim: 128
+            mlp_emb_dim: 128
+            mlp_layers:
+            - 256
+            - 128
+            - 64
+            dropout: 0.2
+            lr: 0.001
+            weight_decay: 0.0001
             n_neg: 10
             batch_size: 2048
-            epochs: 40
-            patience: 6
-            val_users: 300
-            like_threshold: 4.0
+            epochs: 100
+            patience: 15
+            grad_clip_norm: 1.0
+            pop_alpha: 0.75
+            val_users: 1000
+            val_item_batch: 4096
+            like_threshold: 3.5
         seed: 42
     outs:
     - path: models/bias.metrics.json
       hash: md5
-      md5: 75f9ef711506709d4dd2f3905ad373e0
-      size: 336
+      md5: 18e97c18878f66fbf55403e91429b338
+      size: 379
     - path: models/bias.pkl
       hash: md5
-      md5: e13a8681f451c6c2caaa364ecd812dde
-      size: 265035
+      md5: 4cd508a415b6ef1151aba25510483f09
+      size: 55311105
     - path: models/bpr.metrics.json
       hash: md5
-      md5: 5324ad24cc6883172e0b46cdd297b75e
-      size: 333
+      md5: 508b825caa86ab8cc47857a3b6f9028c
+      size: 375
     - path: models/bpr.pkl
       hash: md5
-      md5: 2383ba1407c28ffb21dc998468cdc745
-      size: 16943385
+      md5: 2a3ba1de68dbd76d2659ca7cc89dda6a
+      size: 83521130
     - path: models/global_mean.metrics.json
       hash: md5
-      md5: 3613205937f84fe96f620adcb261f763
-      size: 340
+      md5: c4db6af61cc5fb690df80e457edc89e7
+      size: 379
     - path: models/global_mean.pkl
       hash: md5
-      md5: 90b5fbf96c80a569f919570dbc915fe4
-      size: 85
+      md5: 7ac2e2dab4c936b175ee984ec8dd6715
+      size: 55046252
     - path: models/popularity.metrics.json
       hash: md5
-      md5: 2966af36febedb3ae1cbd9b9c2723ae4
-      size: 336
+      md5: d8c76c814930906b68ee6ec291d09d7d
+      size: 376
     - path: models/popularity.pkl
       hash: md5
-      md5: a215e0ab8427b2910050a9330eed4109
-      size: 104951
+      md5: 23d21c10b59474008514f9de83e5f2a9
+      size: 55151016
+    - path: models/serving.pkl
+      hash: md5
+      md5: cd683e38117b4b7d88551edadc69c1b9
+      size: 8642778
     - path: models/svd.metrics.json
       hash: md5
-      md5: 75ceac0ed65a6996d358dc41393dc615
-      size: 332
+      md5: 64b6edfcc8b0682015210c1f8a8dcb37
+      size: 375
     - path: models/svd.pkl
       hash: md5
-      md5: 8bf6836ba7a5823ecb11d56fea0d8184
-      size: 6617951
+      md5: 95d355c4d053b122da51b525263c1bb0
+      size: 63516915
   evaluate:
     cmd: PYTHONPATH=src uv run python -m recsys.pipeline.evaluate
     deps:
     - path: models/bias.metrics.json
       hash: md5
-      md5: 75f9ef711506709d4dd2f3905ad373e0
-      size: 336
+      md5: 18e97c18878f66fbf55403e91429b338
+      size: 379
     - path: models/bpr.metrics.json
       hash: md5
-      md5: 5324ad24cc6883172e0b46cdd297b75e
-      size: 333
+      md5: 508b825caa86ab8cc47857a3b6f9028c
+      size: 375
     - path: models/global_mean.metrics.json
       hash: md5
-      md5: 3613205937f84fe96f620adcb261f763
-      size: 340
+      md5: c4db6af61cc5fb690df80e457edc89e7
+      size: 379
     - path: models/popularity.metrics.json
       hash: md5
-      md5: 2966af36febedb3ae1cbd9b9c2723ae4
-      size: 336
+      md5: d8c76c814930906b68ee6ec291d09d7d
+      size: 376
     - path: models/svd.metrics.json
       hash: md5
-      md5: 75ceac0ed65a6996d358dc41393dc615
-      size: 332
+      md5: 64b6edfcc8b0682015210c1f8a8dcb37
+      size: 375
     - path: src/recsys/pipeline/evaluate.py
       hash: md5
-      md5: 888d7eb4a5aa3c832030564050c2dff6
-      size: 1797
+      md5: f871e71eeefca207e7b7bffb4d64addc
+      size: 2177
     - path: src/recsys/tracking.py
       hash: md5
-      md5: 4172c84f7e50786017f1998b0660ed2a
-      size: 2293
+      md5: fae6464775f66cfff5392653e52dc520
+      size: 3504
     params:
       configs/config.yaml:
         mlflow:
@@ -205,9 +226,9 @@ stages:
     outs:
     - path: comparison.csv
       hash: md5
-      md5: a80aa1200a0b76860ee057d1d089aa1b
-      size: 1091
+      md5: 583870972f7893ecec0d0ebe8379262f
+      size: 1212
     - path: metrics.json
       hash: md5
-      md5: c7927e8dcbb91e9537cac526d0087a4b
-      size: 2054
+      md5: e4e1df7382e9c68757270bc34c1af8a0
+      size: 2281

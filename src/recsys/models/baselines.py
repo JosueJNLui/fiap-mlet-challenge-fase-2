@@ -37,7 +37,7 @@ class GlobalMeanRecommender(Recommender):
 class BiasRecommender(Recommender):
     """Baseline de vieses regularizados: mu + b_user + b_item."""
 
-    name = "BiasBaseline"
+    name = "Bias"
 
     def __init__(self, n_users: int, n_items: int, reg: float = 10.0) -> None:
         self.n_users = n_users

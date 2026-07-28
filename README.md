@@ -41,7 +41,7 @@ Mapa dos critérios de avaliação do challenge para onde eles vivem no reposit�
 | Docker | 15% | `Dockerfile` multi-stage (builder `uv` + runtime slim non-root), `docker-compose.yml` (train / mlflow / api) |
 | DVC + Pipeline | 15% | `dvc.yaml` com 4 stages (preprocess → feature_eng → train → evaluate), remote no DagsHub, `dvc repro` |
 | Rede neural (PyTorch) | 15% | BPR NeuMF híbrido com early stopping por NDCG@10, comparado a 4 baselines → [MODEL_CARD](docs/MODEL_CARD.md) |
-| MLflow + Registry | 10% | 5 runs por execução rastreados, alias `staging` → `production` → [MLflow](https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/) |
+| MLflow + Registry | 10% | 6 runs por execução rastreados (1 por modelo + resumo), alias `staging` → `production` → [MLflow](https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/) |
 | Vídeo STAR | 10% | — |
 | Bônus: deploy em nuvem | 5% | — |
 
@@ -108,17 +108,21 @@ comandos diferentes — o pipeline e a API compartilham as mesmas dependências.
 make docker-build    # constrói a imagem recsys:local
 make docker-train    # roda o pipeline completo no container (requer .env + data/raw)
 make docker-mlflow   # sobe a UI do MLflow em http://localhost:5000 (backend sqlite local)
-make docker-api      # sobe a API em http://localhost:8000 (requer models/ treinado)
+make docker-api      # sobe a API em http://localhost:8000 (requer .env com creds ou models/)
 ```
 
-Os serviços montam `./data` e `./models` como volumes, então os artefatos gerados no
-container persistem no host (e vice-versa). O treino loga no MLflow do DagsHub, salvo se
-`MLFLOW_TRACKING_URI` for sobrescrito.
+O serviço `train` monta `./data` e `./models` como volumes (a `api` monta só `./models`),
+então os artefatos gerados no container persistem no host e vice-versa. O treino loga
+sempre no MLflow do DagsHub: `init_mlflow` fixa o tracking URI a partir das credenciais e
+falha se elas faltarem — o serviço `mlflow` do compose é só uma UI local com backend
+sqlite, independente do tracking do pipeline.
 
 ## API (FastAPI)
 
-Expõe o modelo final. Carrega o modelo do Model Registry (alias `production`) quando há
-credenciais DagsHub, com **fallback para o pickle local** `models/bpr.pkl`.
+Expõe o modelo final. Carrega do Model Registry (`$SERVED_MODEL@production`, default
+`MovieLens_BPR_Reco`) e, se `models/serving.pkl` não existir localmente, baixa o artefato do
+run promovido — **com credenciais DagsHub no `.env`, a API sobe sem nenhum arquivo em
+`models/`**. Sem Registry acessível, cai para os pickles locais.
 
 ```bash
 make api                                     # uvicorn local em http://localhost:8000
@@ -128,21 +132,33 @@ curl "localhost:8000/recommend?user_id=1"   # top-10 por score (404 se o user n�
 # Swagger: http://localhost:8000/docs
 ```
 
-### Importante: a API exige `models/` treinado e coerente com o código
+### De onde vêm os artefatos
 
-A API depende de dois artefatos em `models/`, gerados pelo stage `train`:
+| Artefato | Origem primária | Fallback |
+| -------- | --------------- | -------- |
+| `serving.pkl` (mapas id↔índice, itens já vistos) | `models/serving.pkl` local | baixa do run em `production` |
+| modelo | Registry `$SERVED_MODEL@production` | pickle local (ex.: `models/bpr.pkl`), forçado p/ CPU |
 
-- `models/serving.pkl` — mapeamentos id↔índice e itens já vistos por usuário (sem fallback);
-- `models/bpr.pkl` — o modelo local, usado como fallback quando o Registry está indisponível
-  (sem creds/rede) ou rejeita as credenciais.
+Basta **credenciais** (Registry) **ou** `models/` treinado (local) — a API só não sobe se
+faltarem os dois. Note que os dois artefatos resolvem em direções opostas: o `serving.pkl`
+tenta o disco primeiro, o modelo tenta o Registry primeiro.
 
-Como o modelo é carregado no startup (readiness via `/health`), se algum artefato faltar
-**ou** estiver desatualizado em relação ao código, o startup falha e `/health` responde
-`503 {"status":"loading"}` — não é "carregando", é falha. O caso mais comum é um `bpr.pkl`
-antigo, picklado contra uma classe que foi renomeada: o unpickle quebra com
-`Can't get attribute '...' on module recsys.models.bpr`.
+O fallback local garante **disponibilidade, não reprodutibilidade**: ele serve o pickle da
+última execução local, que pode não ser a versão em `production` (o treino da rede é
+não-determinístico — ver [Model Card](docs/MODEL_CARD.md#modelo-em-produção-vs-última-execução)).
 
-A correção é sempre **retreinar** para regenerar os pickles com o código atual:
+### Quando `/health` responde 503
+
+O modelo é carregado no startup (readiness via `/health`). Se a carga falhar, `/health`
+responde `503 {"detail":{"status":"loading"}}` — não é "carregando", é falha. Causas:
+
+- **sem credenciais e sem `models/` treinado**: nenhum dos dois caminhos resolve;
+- **pickle local desatualizado** em relação ao código, picklado contra uma classe que foi
+  renomeada — o unpickle quebra com
+  `Can't get attribute '...' on module recsys.models.bpr`.
+
+Correção: preencher `DAGSHUB_TOKEN`/`DAGSHUB_USER` no `.env` (a API passa a baixar tudo do
+Registry) ou retreinar para regenerar os pickles com o código atual:
 
 ```bash
 make train           # regenera models/*.pkl (incl. bpr.pkl) + serving.pkl
@@ -163,11 +179,16 @@ NDCG com IC 95% sobre 500 usuários fixos). Valores de `comparison.csv`.
 | Bias | **0,870** | 0,037 | 0,3% |
 | SVD | 0,992 | **0,122** | 3,2% |
 | Popularity | 1,738 | 0,069 | 0,6% |
-| **BPR (neural)** | 1,268 | 0,117 | **5,5%** |
+| **BPR (neural)** | 1,342 | 0,114 | **9,2%** |
 
-A rede NeuMF **empata estatisticamente com o SVD no ranking** (NDCG@10 0,117 vs 0,122, dentro
+A rede NeuMF **empata estatisticamente com o SVD no ranking** (NDCG@10 0,114 vs 0,122, dentro
 do IC 95%) e entrega a **maior cobertura de catálogo** entre todos os modelos, efeito do
-pop-sampling. Análise completa, hiperparâmetros, limitações e vieses no
+pop-sampling. Por isso é a rede que vai a `production` no Registry e é servida pela API
+(configurável por `SERVED_MODEL`). A tabela acima é a última execução do pipeline; a versão
+em `production` pode ser outra, já que o treino do BPR é não-determinístico e o gate de
+promoção não deixa o alias regredir — ver
+[Modelo em produção vs. última execução](docs/MODEL_CARD.md#modelo-em-produção-vs-última-execução).
+Análise completa, hiperparâmetros, limitações e vieses no
 [Model Card](docs/MODEL_CARD.md).
 
 ## Reprodutibilidade

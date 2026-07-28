@@ -83,15 +83,23 @@ Reproduzível com `dvc repro` (ou `make pipeline` para rodar os módulos direto)
 - **Backend**: MLflow no DagsHub. `init_mlflow` exige `DAGSHUB_TOKEN` e falha de forma
   explícita se ausente (não há fallback local no tracking).
 - **Experimento**: `MovieLens-Reco-Etapa2-Modelagem`.
+- **Runs por execução**: 6 — uma por modelo (`train.py`) mais a `model_comparison_summary`
+  (`evaluate.py`).
 - **Por modelo** (`train.py`): loga `params` (hiperparâmetros achatados, `n_users`,
-  `n_items`, `seed`), `metrics` (as 10 métricas) e tags (`etapa`, `stage`, `model`,
-  `dataset_version_dvc`, `ranking_protocol=full_catalog`).
+  `n_items`, `seed`), `metrics` (as 11 colunas de métricas, IC incluso) e tags (`etapa`,
+  `stage`, `model`, `seed`, `n_users`, `n_items`, `dataset_version_dvc`,
+  `ranking_protocol=full_catalog`).
 - **Registro** (`tracking.py::log_recommender`): cada modelo é embrulhado em
   `RecommenderPyfunc` (um `mlflow.pyfunc.PythonModel`), logado com assinatura inferida e
-  registrado como `MovieLens_<Label>_Reco` (por exemplo `MovieLens_BPR_Reco`).
-- **Promoção** (`tracking.py::promote_to_production`): toda versão nova recebe o alias
-  `staging`; o alias `production` só migra se o NDCG@10 da nova versão superar o da
-  produção atual (ou se ainda não houver produção).
+  registrado como `MovieLens_<Label>_Reco` (por exemplo `MovieLens_BPR_Reco`). O pipeline é
+  o **único** produtor de versões no Registry: `notebooks/models.ipynb` loga runs mas não
+  registra modelos, para que toda versão tenha o mesmo contrato pyfunc que a API consome.
+- **Promoção** (`tracking.py::promote_to_production`): o modelo promovido é o **servido**
+  (`SERVED_MODEL`, default `MovieLens_BPR_Reco` — a rede neural), não o melhor NDCG@10
+  nominal: SVD e BPR empatam dentro do IC 95% e o BPR vence em diversidade (ver
+  [MODEL_CARD](MODEL_CARD.md)). Toda versão nova recebe o alias `staging`; o alias
+  `production` só migra se o NDCG@10 da nova versão superar o da produção atual do
+  mesmo modelo (ou se ainda não houver produção).
 
 ## Serving e API
 
@@ -99,10 +107,14 @@ Arquivos: `api/serving.py` e `api/app.py`.
 
 - **Artefato de serving** (`build_serving_artifact`): derivado de `interactions.parquet`,
   contém `user_to_idx`, `item_ids` (índice para item cru), `seen_by_user` e `n_items`.
-  Persistido em `models/serving.pkl`. A API depende apenas de `models/`, não do dataset.
+  Persistido em `models/serving.pkl` e logado como artefato do run promovido. A API não
+  depende do dataset: usa `models/serving.pkl` se existir, senão **baixa o artefato do run
+  em `production`** — um container só com credenciais sobe sem nenhum arquivo local.
 - **Carga do modelo** (`load_model_prod`): tenta o Registry em
-  `models:/MovieLens_BPR_Reco@production`; se creds, rede ou alias faltarem, faz fallback
-  para o pickle local `models/bpr.pkl` (forçado para CPU).
+  `models:/$SERVED_MODEL@production`; se creds, rede ou alias faltarem, faz fallback
+  para o pickle local (forçado para CPU). O fallback usa o pickle da **última execução
+  local**, que pode não ser a versão em `production` — garante disponibilidade, não
+  reprodutibilidade das recomendações (ver [MODEL_CARD.md](MODEL_CARD.md)).
 - **Rotas**:
   - `GET /health`: `{"status":"ok","timestamp": "...Z"}` com headers `X-Request-ID` e
     `X-Process-Time`; retorna 503 enquanto o modelo não carregou.

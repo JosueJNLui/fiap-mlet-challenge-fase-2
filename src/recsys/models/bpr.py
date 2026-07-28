@@ -7,19 +7,23 @@ Melhorias sobre o BPR-MF original:
     a ~0.09 NDCG@10. Itens populares aparecem como negativos com mais frequência,
     forçando o modelo a aprender preferências genuínas.
 
-2.  **Arquitetura NeuMF híbrida (GMF + MLP):**
-    - **GMF (Generalized MF):** dot product ``p_u·q_i`` — interações lineares.
-    - **MLP:** embeddings separados concatenados → ReLU → Dropout → camadas
-      densas crescentes — interações não lineares.
-    - **Fusão:** concatenação das duas saídas → camada densa final → score.
+2.  **Arquitetura NeuMF híbrida (GMF + MLP + vieses):**
+    - **GMF (Generalized MF):** produto elemento a elemento ``p_u * q_i``, cujo vetor
+      alimenta a fusão — interações lineares.
+    - **MLP:** embeddings separados concatenados → camadas densas decrescentes
+      (Linear → ReLU → Dropout) — interações não lineares.
+    - **Vieses:** ``user_bias``/``item_bias`` somados ao score; foi o principal
+      ganho de ranking sobre o BPR-MF puro.
+    - **Fusão:** concatenação das saídas GMF e MLP → camada densa final → score.
     Inspirado no NeuMF (He et al. 2017, "Neural Collaborative Filtering").
 
 3.  **Regularização melhorada:** Dropout nos embeddings MLP e nas camadas
     densas, weight decay mais agressivo e gradient clipping.
 
 4.  **Predição calibrada:** ``predict`` aplica ``mu + (pred - mu_pred)
-     * (sigma_ratings / sigma_pred)`` para alinhar a escala de scores BPR
-     com ratings reais, melhorando o RMSE sem afetar a ordenação do ranking.
+     * (sigma_ratings / sigma_pred)`` para colocar o score BPR na escala de notas
+     sem afetar a ordenação do ranking. É cosmético: o modelo otimiza ranking, não
+     erro de nota, e as métricas de regressão continuam ruins (ver MODEL_CARD).
 """
 
 from __future__ import annotations
@@ -226,8 +230,8 @@ class BPRRecommender(Recommender):
         return DataLoader(ds, batch_size=self.params["batch_size"], shuffle=True)
 
     def _train_loop(self, loader, sampler, val, seen_by_user) -> dict:
-        # ponytail: constant-LR AdamW; early stopping does the work. Val NDCG peaks
-        # ~epoch 3, so a warm-restart scheduler (T_0=25) never completed a cycle.
+        # AdamW com LR constante; o early stopping faz o controle. O val NDCG satura
+        # ~época 3, então um scheduler warm-restart (T_0=25) nunca completava um ciclo.
         opt = self._optimizer()
         history = {"train_loss": [], "val_ndcg": []}
         best_ndcg, best_state, since = -1.0, None, 0
