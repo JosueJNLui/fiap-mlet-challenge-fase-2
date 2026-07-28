@@ -1,0 +1,5 @@
+# Bytecode do Python: fica dentro de src/recsys/{models,evaluation}, que são deps de
+# stages do dvc.yaml. Sem isto, qualquer import (pytest, make validate) regenera os .pyc,
+# muda o hash do diretório e deixa `dvc status` sujo sem nenhuma alteração de código.
+__pycache__/
+*.py[cod]

@@ -110,18 +110,20 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
 | Bias | **0,870** | **0,665** | **0,306** | 0,025 | 0,022 | 0,037 | 0,003 | 10,39 | 0,999 |
 | SVD | 0,992 | 0,778 | 0,099 | **0,097** | 0,079 | **0,122** | 0,032 | 9,50 | 0,987 |
 | Popularity | 1,738 | 1,412 | -1,767 | 0,053 | 0,041 | 0,069 | 0,006 | 8,41 | 0,998 |
-| **BPR (neural)** | 1,268 | 1,024 | -0,474 | 0,092 | **0,081** | 0,117 | **0,055** | 9,77 | **0,979** |
+| **BPR (neural)** | 1,342 | 1,086 | -0,650 | 0,087 | **0,088** | 0,114 | **0,092** | 10,46 | **0,957** |
 
-- **Melhor RMSE**: Bias (0,870). **Melhor NDCG@10 (valor nominal)**: SVD (0,122). A promoção a
-  `production` no Registry usa o critério de NDCG@10.
-- **Ranking: empate estatístico entre SVD e BPR.** SVD 0,122 ± 0,015 vs BPR 0,117 ± 0,015;
-  a diferença (0,006) cai **bem dentro do IC 95% da diferença** (± 0,022) — não é significativa
+- **Melhor RMSE**: Bias (0,870). **Melhor NDCG@10 (valor nominal)**: SVD (0,122). Como o
+  ranking empata estatisticamente (próximo item), o desempate é a **diversidade**, e o
+  modelo promovido a `production` é a rede neural (BPR) — que é também o modelo servido
+  pela API.
+- **Ranking: empate estatístico entre SVD e BPR.** SVD 0,122 ± 0,015 vs BPR 0,114 ± 0,014;
+  a diferença (0,008) cai **bem dentro do IC 95% da diferença** (± 0,021) — não é significativa
   com 500 usuários. A rede NeuMF empata com o SVD no ranking, sem superá-lo. (O NDCG@10 do
   BPR varia entre execuções por não-determinismo de GPU/MPS, dentro do próprio IC — mais uma
   evidência do empate.)
-- **Diversidade: o diferencial do BPR.** Coverage 5,5% vs 3,2% do SVD (1,7×) — a maior
-  cobertura de catálogo entre todos os modelos —, Gini 0,979 vs 0,987 (menos concentrado) e
-  recomendações um pouco mais de nicho (novelty 9,77 vs 9,50 do SVD; a `Popularity` é a menos
+- **Diversidade: o diferencial do BPR.** Coverage 9,2% vs 3,2% do SVD (2,9×) — a maior
+  cobertura de catálogo entre todos os modelos —, Gini 0,957 vs 0,987 (menos concentrado) e
+  recomendações mais de nicho (novelty 10,46 vs 9,50 do SVD; a `Popularity` é a menos
   novel, 8,41, como esperado). Efeito direto do pop-sampling.
 - **Por que o BPR tem RMSE/MAE/R2 ruins**: é um modelo de ranking. A calibração z-score
   coloca o score na escala [0,5; 5,0], mas os valores não são notas confiáveis (R2 negativo,
@@ -136,7 +138,7 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
   modelos usam só IDs de interação. Isso limita cold-start e interpretabilidade.
 - **Viés de popularidade e concentração**: Gini alto (0,96–0,99) e coverage baixa indicam
   que as recomendações se concentram numa fração dos 13.088 itens. O BPR mitiga isso
-  (coverage 5,5%, Gini 0,979), mas não elimina.
+  (coverage 9,2%, Gini 0,957), mas não elimina.
 - **Viés de amostragem**: só 20.000 usuários (de aproximadamente 138 mil) e apenas
   usuários e itens com pelo menos 20 interações. O modelo é treinado sobre usuários ativos
   e itens populares, não sobre a distribuição completa.
@@ -155,6 +157,37 @@ modelos (`get_ranking_users`); o NDCG@10 é reportado com **IC 95%** (± 1,96·E
 
 ## Registro no MLflow
 
-Registrado como `MovieLens_BPR_Reco`. Cada versão recebe o alias `staging`; o alias
-`production` só migra quando o NDCG@10 supera o da produção atual. Detalhes do fluxo de
-tracking e promoção estão em [ARCHITECTURE.md](ARCHITECTURE.md).
+Registrado como `MovieLens_BPR_Reco` — o modelo servido pela API e promovido a
+`production`. Cada versão recebe o alias `staging`; o alias `production` só migra quando o
+NDCG@10 supera o da produção atual do mesmo modelo. Os baselines também são registrados
+(`MovieLens_<Label>_Reco`) para comparação, mas não recebem `production`.
+
+O modelo servido é configurável por `SERVED_MODEL` no `.env`: apontar para
+`MovieLens_SVD_Reco` permite A/B testar o melhor baseline sem deploy de código — exige que a
+versão alvo já tenha o alias `production` (só a rede neural tem, por padrão). Detalhes do
+fluxo de tracking e promoção estão em [ARCHITECTURE.md](ARCHITECTURE.md).
+
+### Modelo em produção vs. última execução
+
+A tabela de **Resultados** acima reporta a última execução do pipeline (`comparison.csv`,
+regenerado por `dvc repro`). Ela **não** é necessariamente a versão em `production`: o
+treino do BPR é não-determinístico (kernels de GPU/MPS), então cada `dvc repro` produz uma
+versão com métricas ligeiramente diferentes, e o gate de promoção só migra o alias se a nova
+versão superar o NDCG@10 da produção atual.
+
+Estado atual do Registry:
+
+| Alias | Versão | NDCG@10 | Coverage |
+| ----- | ------ | ------- | -------- |
+| `production` (servido pela API) | v11 | **0,117** | 5,5% |
+| `staging` (última execução, tabela acima) | v13 | 0,114 | 9,2% |
+
+A v13 ficou 0,002 abaixo em NDCG@10 — dentro do próprio IC (± 0,014), ou seja, ruído — e o
+gate barrou a promoção, mantendo a v11. É o comportamento pretendido: o alias `production`
+não regride por variação de execução. Note que a v13 é melhor em diversidade (coverage
+9,2% vs 5,5%); promovê-la exigiria um critério multi-métrica, não um override manual.
+
+**Fallback local**: se o Registry estiver inacessível, a API cai para `models/bpr.pkl`
+(ver [ARCHITECTURE.md](ARCHITECTURE.md)). Esse pickle é o da **última execução local**, não
+necessariamente a versão em `production` — o fallback garante disponibilidade, não
+reprodutibilidade das recomendações.

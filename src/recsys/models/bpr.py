@@ -226,8 +226,8 @@ class BPRRecommender(Recommender):
         return DataLoader(ds, batch_size=self.params["batch_size"], shuffle=True)
 
     def _train_loop(self, loader, sampler, val, seen_by_user) -> dict:
-        # ponytail: constant-LR AdamW; early stopping does the work. Val NDCG peaks
-        # ~epoch 3, so a warm-restart scheduler (T_0=25) never completed a cycle.
+        # AdamW com LR constante; o early stopping faz o controle. O val NDCG satura
+        # ~época 3, então um scheduler warm-restart (T_0=25) nunca completava um ciclo.
         opt = self._optimizer()
         history = {"train_loss": [], "val_ndcg": []}
         best_ndcg, best_state, since = -1.0, None, 0

@@ -163,11 +163,16 @@ NDCG com IC 95% sobre 500 usuários fixos). Valores de `comparison.csv`.
 | Bias | **0,870** | 0,037 | 0,3% |
 | SVD | 0,992 | **0,122** | 3,2% |
 | Popularity | 1,738 | 0,069 | 0,6% |
-| **BPR (neural)** | 1,268 | 0,117 | **5,5%** |
+| **BPR (neural)** | 1,342 | 0,114 | **9,2%** |
 
-A rede NeuMF **empata estatisticamente com o SVD no ranking** (NDCG@10 0,117 vs 0,122, dentro
+A rede NeuMF **empata estatisticamente com o SVD no ranking** (NDCG@10 0,114 vs 0,122, dentro
 do IC 95%) e entrega a **maior cobertura de catálogo** entre todos os modelos, efeito do
-pop-sampling. Análise completa, hiperparâmetros, limitações e vieses no
+pop-sampling. Por isso é a rede que vai a `production` no Registry e é servida pela API
+(configurável por `SERVED_MODEL`). A tabela acima é a última execução do pipeline; a versão
+em `production` pode ser outra, já que o treino do BPR é não-determinístico e o gate de
+promoção não deixa o alias regredir — ver
+[Modelo em produção vs. última execução](docs/MODEL_CARD.md#modelo-em-produção-vs-última-execução).
+Análise completa, hiperparâmetros, limitações e vieses no
 [Model Card](docs/MODEL_CARD.md).
 
 ## Reprodutibilidade

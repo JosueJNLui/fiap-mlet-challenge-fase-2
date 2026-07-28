@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     dagshub_user: str | None = None
     dagshub_token: str | None = None
 
+    # Modelo servido pela API e promovido a ``production``. Trocar por env var permite
+    # A/B testar um baseline (ex.: MovieLens_SVD_Reco) sem deploy de código.
+    served_model: str = "MovieLens_BPR_Reco"
+
+    @property
+    def served_label(self) -> str:
+        """Rótulo do modelo servido (``BPR`` em ``MovieLens_BPR_Reco``)."""
+        return self.served_model.removeprefix("MovieLens_").removesuffix("_Reco")
+
     @classmethod
     def settings_customise_sources(
         cls,
