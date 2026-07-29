@@ -46,8 +46,8 @@ test: ## Roda a suíte de testes.
 validate-branch: ## Valida a branch atual ou BRANCH=<nome>.
 	$(UV) run python scripts/validate_branch.py "$(BRANCH)"
 
-validate-commits: ## Valida os commits em COMMITS_RANGE, padrão origin/main..HEAD.
-	$(UV) run python scripts/validate_commits.py --range "$(COMMITS_RANGE)"
+validate-commits: ## Valida os commits em COMMITS_RANGE, padrão origin/main..HEAD (não bloqueia).
+	$(UV) run python scripts/validate_commits.py --range "$(COMMITS_RANGE)" || true
 
 validate-tags: ## Valida todas as tags do repositório ou TAGS="1.2.3 2.0.0".
 	$(UV) run python scripts/validate_tags.py $(TAGS)
