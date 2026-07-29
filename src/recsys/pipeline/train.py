@@ -53,6 +53,7 @@ def _flat_params(kwargs: dict, n_users: int, n_items: int, seed: int) -> dict:
 
 def _train_one(
     spec: Spec, train: pd.DataFrame, test: pd.DataFrame, meta: dict, s: Settings,
+    serving: Path | None = None,
 ) -> dict:
     """Treina, avalia, loga a run MLflow e persiste o modelo + suas métricas."""
     name, kwargs, label = spec
@@ -75,6 +76,8 @@ def _train_one(
             "n_users": n_users, "n_items": n_items, "ranking_protocol": "full_catalog",
         })
         log_recommender(model, test[["user_idx", "item_idx"]].head(5), f"MovieLens_{label}_Reco")
+        if serving and label == s.served_label:  # a API baixa este artefato do run promovido
+            mlflow.log_artifact(str(serving))
     print(f"train: {label} — ndcg@10={metrics.get('ndcg_at_10', float('nan')):.4f}")
     return metrics
 
@@ -86,9 +89,9 @@ def main() -> None:
     train = pd.read_parquet(s.paths.processed / TRAIN)
     test = pd.read_parquet(s.paths.processed / TEST)
     meta = read_json(s.paths.processed / META)
+    serving = build_serving_artifact(s)  # antes do loop: vai como artefato do run servido
     for spec in _specs(s):
-        _train_one(spec, train, test, meta, s)
-    build_serving_artifact(s)  # artefato self-contained p/ a API (Task 6)
+        _train_one(spec, train, test, meta, s, serving)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Como preparar o ambiente, seguir as convenções e validar o trabalho antes de c
 
 ## Pré-requisitos
 
-- Python 3.13 (o projeto exige `>=3.13,<3.14`).
+- Python 3.12 ou 3.13 (o projeto exige `>=3.12,<3.14`; o `.python-version` fixa 3.13).
 - [`uv`](https://docs.astral.sh/uv/) para gerenciar dependências.
 - Credenciais DagsHub (para treino, tracking MLflow e remote DVC).
 

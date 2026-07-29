@@ -95,7 +95,7 @@ pipeline: preprocess feature-eng train evaluate ## Roda o pipeline completo de p
 repro: ## Roda o pipeline do DVC (dvc repro).
 	$(DVC) repro
 
-api: ## Sobe o modelo via FastAPI em http://localhost:8000 (requer models/).
+api: ## Sobe o modelo via FastAPI em http://localhost:8000 (requer .env com creds ou models/).
 	PYTHONPATH=src $(UV) run uvicorn recsys.api.app:app --host 0.0.0.0 --port 8000
 
 # ── Docker ────────────────────────────────────────────────────────────────────
@@ -115,5 +115,5 @@ docker-train: ## Roda o pipeline completo em um container (requer .env + data/ra
 docker-mlflow: ## Sobe a UI local do MLflow em http://localhost:5000.
 	docker compose up mlflow
 
-docker-api: ## Sobe a API em um container em http://localhost:8000 (requer models/).
+docker-api: ## Sobe a API em um container em http://localhost:8000 (requer .env com creds ou models/).
 	docker compose up api

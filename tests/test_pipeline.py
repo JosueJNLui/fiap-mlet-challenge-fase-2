@@ -26,6 +26,12 @@ def test_env_overrides_yaml(monkeypatch) -> None:
     assert Settings().data.n_users_sample == 5
 
 
+def test_served_label_defaults_to_neural_and_follows_env(monkeypatch) -> None:
+    assert Settings().served_label == "BPR"
+    monkeypatch.setenv("SERVED_MODEL", "MovieLens_SVD_Reco")
+    assert Settings().served_label == "SVD"
+
+
 def test_model_roundtrip(tmp_path) -> None:
     model = GlobalMeanRecommender()
     save_model(model, tmp_path, "gm")

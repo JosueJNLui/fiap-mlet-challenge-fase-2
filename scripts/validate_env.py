@@ -19,11 +19,11 @@ RATINGS_CSV = PROJECT_ROOT / "data" / "raw" / "rating.csv"
 
 
 def check_python() -> tuple[bool, str, str]:
-    """Confere se a versão do Python está em >=3.13,<3.14 (ver pyproject.toml)."""
+    """Confere se a versão do Python está em >=3.12,<3.14 (ver pyproject.toml)."""
     major, minor = sys.version_info[:2]
-    ok = (major, minor) == (3, 13)
-    hint = "" if ok else "Use Python 3.13.x (requires-python = >=3.13,<3.14)."
-    return ok, f"Python {major}.{minor} (esperado 3.13.x)", hint
+    ok = major == 3 and minor in (12, 13)
+    hint = "" if ok else "Use Python 3.12.x ou 3.13.x (requires-python = >=3.12,<3.14)."
+    return ok, f"Python {major}.{minor} (esperado 3.12.x ou 3.13.x)", hint
 
 
 def check_import(module: str) -> tuple[bool, str, str]:
