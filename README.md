@@ -19,6 +19,9 @@ flowchart LR
 
 - **MLflow (Registry + runs)**: <https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/> —
   experimentos rastreados e o modelo `MovieLens_BPR_Reco` promovido a `production`.
+- **Vídeo no Youtube**: <https://youtu.be/FB-syoBNFxk> — **Tech Challenge FIAP · MLET Fase 2** (Método STAR)
+- **API em Produção**: <https://fiap-mlet-challenge.rgplabs.space> — endpoint base (ex.: `/health`, `/recommend`)
+- **Swagger UI (docs)**: <https://fiap-mlet-challenge.rgplabs.space/docs> — documentação interativa da API
 
 ## Documentação
 
@@ -42,8 +45,8 @@ Mapa dos critérios de avaliação do challenge para onde eles vivem no reposit�
 | DVC + Pipeline | 15% | `dvc.yaml` com 4 stages (preprocess → feature_eng → train → evaluate), remote no DagsHub, `dvc repro` |
 | Rede neural (PyTorch) | 15% | BPR NeuMF híbrido com early stopping por NDCG@10, comparado a 4 baselines → [MODEL_CARD](docs/MODEL_CARD.md) |
 | MLflow + Registry | 10% | 6 runs por execução rastreados (1 por modelo + resumo), alias `staging` → `production` → [MLflow](https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/) |
-| Vídeo STAR | 10% | — |
-| Bônus: deploy em nuvem | 5% | — |
+| Vídeo STAR | 10% | [**Tech Challenge FIAP · MLET Fase 2**](https://youtu.be/FB-syoBNFxk) |
+| Bônus: deploy em nuvem | 5% | <https://fiap-mlet-challenge.rgplabs.space> (API) · <https://fiap-mlet-challenge.rgplabs.space/docs> (Swagger) |
 
 ## Instalação
 
