@@ -20,8 +20,8 @@ flowchart LR
 - **MLflow (Registry + runs)**: <https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/> —
   experimentos rastreados e o modelo `MovieLens_BPR_Reco` promovido a `production`.
 - **Vídeo no Youtube**: <https://youtu.be/FB-syoBNFxk> — **Tech Challenge FIAP · MLET Fase 2** (Método STAR)
-- **API em Produção**: <https://fiap-mlet-challenge.rgplabs.space> — endpoint base (ex.: `/health`, `/recommend`)
-- **Swagger UI (docs)**: <https://fiap-mlet-challenge.rgplabs.space/docs> — documentação interativa da API
+- **API em Produção**: <https://fiap-mlet-challenge.srv1866531.hstgr.cloud> — endpoint base (ex.: `/health`, `/recommend`)
+- **Swagger UI (docs)**: <https://fiap-mlet-challenge.srv1866531.hstgr.cloud/docs> — documentação interativa da API
 
 ## Documentação
 
