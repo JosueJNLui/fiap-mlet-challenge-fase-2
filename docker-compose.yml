@@ -24,8 +24,10 @@ services:
       --default-artifact-root /app/mlruns/artifacts
 
   api:                            # serving self-contained: só precisa de ./models
-    build: .
-    image: recsys:local
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: recsys-api:local
     ports: ["8000:8000"]
     env_file: .env                # creds DagsHub p/ carregar o modelo do Registry
     volumes:
