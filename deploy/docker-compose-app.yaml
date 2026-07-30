@@ -1,0 +1,21 @@
+
+services:   
+  api:
+    image: ghcr.io/josuejnlui/fiap-mlet-challenge-fase-2-api:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`fiap-mlet-challenge.srv1866531.hstgr.cloud`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=8000
+    ports: 
+      - "127.0.0.1:8000:8000"
+    environment:
+      DAGSHUB_TOKEN: ${DAGSHUB_TOKEN}
+    healthcheck:
+      test: ["CMD-SHELL", "uvx python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: always
