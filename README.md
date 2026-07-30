@@ -46,7 +46,7 @@ Mapa dos critérios de avaliação do challenge para onde eles vivem no reposit�
 | Rede neural (PyTorch) | 15% | BPR NeuMF híbrido com early stopping por NDCG@10, comparado a 4 baselines → [MODEL_CARD](docs/MODEL_CARD.md) |
 | MLflow + Registry | 10% | 6 runs por execução rastreados (1 por modelo + resumo), alias `staging` → `production` → [MLflow](https://dagshub.com/JosueJNLui/fiap-mlet-challenge-fase-2.mlflow/) |
 | Vídeo STAR | 10% | [**Tech Challenge FIAP · MLET Fase 2**](https://youtu.be/FB-syoBNFxk) |
-| Bônus: deploy em nuvem | 5% | <https://fiap-mlet-challenge.rgplabs.space> (API) · <https://fiap-mlet-challenge.rgplabs.space/docs> (Swagger) |
+| Bônus: deploy em nuvem | 5% | <https://fiap-mlet-challenge.srv1866531.hstgr.cloud> (API) · <https://fiap-mlet-challenge.srv1866531.hstgr.cloud/docs> (Swagger) |
 
 ## Instalação
 
